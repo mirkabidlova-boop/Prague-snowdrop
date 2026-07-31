@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prague Snowdrop</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23D9695B'/%3E%3Cg transform='translate(20,14)' stroke='white' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 34V16'/%3E%3Cpath d='M12 16c0-5 -3-5 -3-10a3 3 0 0 1 6 0c0 5 -3 5 -3 10Z'/%3E%3Cpath d='M7 24c-2.5 0-4 1.5-4 1.5'/%3E%3Cpath d='M17 24c2.5 0 4 1.5 4 1.5'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23D9695B'/%3E%3Cg transform='translate(20,14)' stroke='white' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 34V16'/%3E%3Cpath d='M12 16c0-5 -3-5 -3-10a3 3 0 0 1 6 0c0 5 -3 5 -3 10Z'/%3E%3Cpath d='M7 24c-2.5 0-4 1.5-4 1.5'/%3E%3Cpath d='M17 24c2.5 0 4 1.5 4 1.5'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ===== 1. PROMĚNNÉ A RESET ===== */
+  :root{
+    --barva-pozadi: #F7F5F2;
+    --barva-karta: #ffffff;
+    --barva-text: #262322;
+    --barva-textslaby: #7C7570;
+    --barva-primarni: #D9695B;
+    --barva-primarni-tmava: #B84F42;
+    --barva-akcent: #3B7DDE;
+    --barva-akcent-tmava: #2E64B3;
+    --barva-akcent-svetla: #E9F1FC;
+    --barva-hranice: #EAE4DD;
+    --barva-ok: #2f855a;
+    --barva-varovani: #b45309;
+    --barva-chyba: #C0392B;
+    --barva-cap-malo: #b45309;
+    --radius: 14px;
+  }
+  *{ box-sizing: border-box; }
+  [hidden]{ display:none !important; }
+  body{
+    margin:0;
+    padding-bottom:92px;
+    background:var(--barva-pozadi);
+    color:var(--barva-text);
+    font-family:'Inter','Segoe UI',Arial,sans-serif;
+    font-size:16px;
+  }
+  button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible{
+    outline:3px solid var(--barva-akcent); outline-offset:2px;
+  }
+
+  /* ===== 2. ZÁKLADNÍ LAYOUT A TYPOGRAFIE ===== */
+  header{
+    background:var(--barva-primarni); color:#fff;
+    padding:18px 20px; text-align:center;
+  }
+  header h1{ margin:0; font-size:1.35rem; font-weight:800; letter-spacing:.2px; }
+  header .podtitulek{ font-size:.78rem; opacity:.85; margin-top:2px; }
+  main{ max-width:640px; margin:0 auto; padding:16px; }
+  .sekce-hlavicka{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+  .sekce-hlavicka h2{ margin:0; }
+  h2{ font-size:1.2rem; font-weight:800; }
+  h3{ font-size:1rem; margin:18px 0 8px; color:var(--barva-textslaby); }
+  .text-slaby{ color:var(--barva-textslaby); font-size:0.85rem; margin-top:4px; }
+  .napoveda{ color:var(--barva-textslaby); font-size:0.8rem; margin:2px 0 10px; }
+  .napoveda-kroky{ color:var(--barva-textslaby); font-size:0.88rem; padding-left:20px; line-height:1.6; }
+  .prazdny-stav{ text-align:center; padding:36px 16px; color:var(--barva-textslaby); }
+  .prazdny-stav svg{ color:var(--barva-hranice); margin-bottom:10px; }
+  .prazdny-stav p{ margin:0; font-size:.92rem; line-height:1.5; }
+
+  /* ===== 3. NAVIGACE (taby dole) ===== */
+  nav.taby{
+    position:fixed; left:0; right:0; bottom:0;
+    display:flex;
+    background:var(--barva-primarni);
+    box-shadow:0 -2px 10px rgba(0,0,0,.14);
+    z-index:100;
+  }
+  .tab-tlacitko{
+    flex:1; padding:10px 4px 8px; font-size:0.78rem;
+    background:none; border:none; color:rgba(255,255,255,.72);
+    text-align:center; cursor:pointer; font-family:inherit;
+  }
+  .tab-tlacitko.aktivni{ color:#fff; font-weight:800; }
+
+  /* ===== 4. SPOLEČNÉ KOMPONENTY (formuláře, tlačítka, karty) ===== */
+  .formular-karta{
+    background:var(--barva-karta);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:16px;
+    box-shadow:0 1px 3px rgba(0,0,0,.08);
+  }
+  label{ display:block; font-size:0.85rem; color:var(--barva-textslaby); margin:10px 0 4px; }
+  input[type="text"], input[type="number"], input[type="date"], input[type="file"], select{
+    width:100%; padding:10px; border:1px solid var(--barva-hranice);
+    border-radius:8px; font-size:1rem; font-family:inherit; background:#fff; color:var(--barva-text);
+  }
+  .mrizka-2{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:4px 10px; }
+
+  .tlacitko{
+    display:inline-block; padding:12px 18px; border:none; border-radius:8px;
+    background:var(--barva-primarni); color:#fff; font-size:1rem; font-weight:700;
+    cursor:pointer; margin-top:14px; text-align:center; font-family:inherit; text-decoration:none;
+  }
+  .tlacitko:hover{ background:var(--barva-primarni-tmava); }
+  .tlacitko.sekundarni{ background:#efeae3; color:var(--barva-text); }
+  .tlacitko.nebezpecna{ background:var(--barva-chyba); }
+  button.tlacitko:disabled{ opacity:.5; cursor:not-allowed; }
+
+  .karta{
+    background:var(--barva-karta); border-radius:var(--radius); padding:14px; margin-bottom:10px;
+    box-shadow:0 1px 3px rgba(0,0,0,.06); display:flex; justify-content:space-between;
+    align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  .karta-sloupec{ flex-direction:column; align-items:stretch; }
+  .karta-hlavicka{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px; }
+  .karta-akce{ display:flex; gap:2px; flex-wrap:wrap; }
+
+  table{ width:100%; border-collapse:collapse; margin-top:6px; }
+  th, td{ padding:8px 6px; text-align:left; border-bottom:1px solid var(--barva-hranice); font-size:0.88rem; }
+  th{ color:var(--barva-textslaby); font-weight:700; }
+  tr.stav-ok{ background:#f0fdf4; }
+  tr.stav-varovani{ background:#fff7ed; }
+
+  .odznak{
+    display:inline-block; padding:4px 10px; border-radius:20px; font-size:0.82rem; font-weight:700;
+    background:#efeae3; color:var(--barva-text);
+  }
+  .odznak-ok{ background:#def7ec; color:var(--barva-ok); }
+  .odznak-varovani{ background:#fff5e6; color:var(--barva-varovani); }
+
+  /* ===== 4b. SEKCE (přepínání viditelnosti tabů) ===== */
+  .sekce{ display:none; }
+  .sekce.aktivni{ display:block; }
+
+  /* ===== 5. ŘÁDKOVÝ SEZNAM (Psi, Suroviny) ===== */
+  .seznam-radku{
+    background:var(--barva-karta); border-radius:var(--radius); overflow:hidden;
+    box-shadow:0 1px 3px rgba(0,0,0,.06);
+  }
+  .radek-seznamu{
+    display:flex; align-items:center; gap:12px; padding:12px 14px;
+    border-bottom:1px solid var(--barva-hranice);
+  }
+  .radek-seznamu:last-child{ border-bottom:none; }
+  .avatar-radku{ width:48px; height:48px; border-radius:50%; object-fit:cover; flex:0 0 48px; }
+  .avatar-zastupny{
+    display:flex; align-items:center; justify-content:center;
+    background:var(--barva-akcent-svetla); color:var(--barva-akcent);
+  }
+  .avatar-surovina{ background:#EBF3EA; color:var(--barva-ok); }
+  .radek-obsah{ flex:1; min-width:0; }
+  .radek-obsah strong{ display:block; font-size:1rem; }
+  .radek-obsah .text-slaby{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .radek-akce{ display:flex; gap:2px; flex:0 0 auto; }
+  .tlacitko-ikona{
+    width:36px; height:36px; border:none; border-radius:50%; background:transparent;
+    color:var(--barva-textslaby); display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .tlacitko-ikona:hover{ background:var(--barva-pozadi); }
+  .tlacitko-ikona.nebezpecna{ color:var(--barva-chyba); }
+
+  /* ===== 6. PLOVOUCÍ TLAČÍTKO "+ PŘIDAT" ===== */
+  .tlacitko-fab{
+    width:48px; height:48px; flex:0 0 48px; border-radius:50%; border:none;
+    background:var(--barva-akcent); color:#fff; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 3px 8px rgba(0,0,0,.2); cursor:pointer;
+  }
+  .tlacitko-fab:hover{ background:var(--barva-akcent-tmava); }
+
+  /* ===== 7. PŘEKRYVNÝ PANEL S FORMULÁŘEM ===== */
+  .prekryv{
+    position:fixed; inset:0; background:rgba(38,35,34,.5);
+    display:flex; align-items:flex-end; justify-content:center;
+    z-index:200; padding:0;
+  }
+  .panel{
+    background:var(--barva-karta); width:100%; max-width:640px;
+    border-radius:20px 20px 0 0; padding:20px; max-height:88vh; overflow-y:auto;
+    animation: vyjet-panel .2s ease-out;
+  }
+  @keyframes vyjet-panel{ from{ transform:translateY(24px); opacity:.5; } to{ transform:translateY(0); opacity:1; } }
+  @media (prefers-reduced-motion: reduce){ .panel{ animation:none; } }
+  @media (min-width:600px){
+    .prekryv{ align-items:center; padding:20px; }
+    .panel{ border-radius:16px; max-height:85vh; }
+  }
+  .panel-hlavicka{ display:flex; justify-content:space-between; align-items:center; }
+  .panel-hlavicka h3{ margin:0; font-size:1.1rem; color:var(--barva-text); }
+  .tlacitko-zavrit{
+    background:none; border:none; font-size:1.3rem; color:var(--barva-textslaby);
+    cursor:pointer; padding:4px 8px; line-height:1;
+  }
+
+  /* ===== 8. FOTKA PSA ===== */
+  .nahled-fotky{ width:88px; height:88px; border-radius:50%; object-fit:cover; display:block; margin-top:10px; }
+  .foto-nahled-obal{ display:flex; align-items:center; gap:12px; }
+  .foto-nahled-obal .tlacitko-maly{ margin-top:10px; }
+
+  .tlacitko-maly{
+    padding:7px 12px; font-size:0.85rem; border-radius:6px; border:none;
+    cursor:pointer; margin-right:6px; background:#efeae3; color:var(--barva-text); font-family:inherit;
+  }
+  .tlacitko-maly.nebezpecna{ background:var(--barva-chyba); color:#fff; }
+
+  /* ===== 9. DYNAMICKÉ ŘÁDKY (recepty, deník) ===== */
+  .radek-polozky{ display:flex; gap:8px; margin-bottom:8px; align-items:center; }
+  .radek-polozky select{ flex:2; min-width:0; }
+  .radek-polozky input{ flex:1; min-width:70px; }
+  .tlacitko-odebrat{
+    flex:0 0 34px; width:34px; height:34px; border:none; border-radius:6px;
+    background:var(--barva-chyba); color:#fff; font-size:1rem; cursor:pointer;
+  }
+
+  /* ===== 10. DENÍK — přepínač a navigace období ===== */
+  .prepinac-obdobi{ display:flex; gap:6px; margin-bottom:10px; }
+  .prepinac-obdobi button{
+    flex:1; padding:10px; border:1px solid var(--barva-hranice); background:#fff;
+    border-radius:8px; cursor:pointer; font-weight:700; color:var(--barva-textslaby); font-family:inherit;
+  }
+  .prepinac-obdobi button.aktivni{ background:var(--barva-primarni); color:#fff; border-color:var(--barva-primarni); }
+  .navigace-obdobi{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .navigace-obdobi button{
+    background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--barva-primarni); padding:4px 16px;
+  }
+  .navigace-obdobi span{ font-weight:700; }
+  .pomer-cap{ margin-top:14px; text-align:center; }
+
+  /* ===== 11. DENÍK — souhrn Ca:P (den/týden/měsíc najednou) ===== */
+  .cap-radek{ display:flex; gap:10px; margin-bottom:16px; }
+  .cap-polozka{
+    flex:1; background:var(--barva-karta); border-radius:var(--radius); padding:10px 6px;
+    text-align:center; box-shadow:0 1px 3px rgba(0,0,0,.06);
+  }
+  .cap-nazev{ display:block; font-size:0.78rem; color:var(--barva-textslaby); margin-bottom:4px; }
+  .cap-hodnota{ display:block; font-size:1.05rem; font-weight:800; }
+  .cap-ok{ color:var(--barva-ok); }
+  .cap-malo{ color:var(--barva-cap-malo); }
+  .cap-moc{ color:var(--barva-chyba); }
+  .cap-neznamo{ color:var(--barva-textslaby); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Prague Snowdrop</h1>
+  <div class="podtitulek">Krmný deník a přehled výživy</div>
+</header>
+
+<main>
+
+  <!-- ==== SEKCE: PSI ==== -->
+  <section id="sekce-psi" class="sekce aktivni">
+    <div class="sekce-hlavicka">
+      <h2>Psi</h2>
+      <button type="button" class="tlacitko-fab" onclick="otevriPanelPridatPsa()" aria-label="Přidat psa">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
+    </div>
+    <div id="seznam-psu"></div>
+  </section>
+
+  <!-- ==== SEKCE: SUROVINY ==== -->
+  <section id="sekce-suroviny" class="sekce">
+    <div class="sekce-hlavicka">
+      <h2>Suroviny</h2>
+      <button type="button" class="tlacitko-fab" onclick="otevriPanelPridatSurovinu()" aria-label="Přidat surovinu">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
+    </div>
+    <div id="seznam-surovin"></div>
+  </section>
+
+  <!-- ==== SEKCE: RECEPTY ==== -->
+  <section id="sekce-recepty" class="sekce">
+    <div class="sekce-hlavicka">
+      <h2>Recepty</h2>
+      <button type="button" class="tlacitko-fab" onclick="otevriPanelPridatRecept()" aria-label="Přidat recept">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
+    </div>
+    <label for="recept-vyber-psa">Pes</label>
+    <select id="recept-vyber-psa" onchange="zmenaPsaRecepty()"></select>
+
+    <div id="seznam-receptu"></div>
+  </section>
+
+  <!-- ==== SEKCE: DENÍK ==== -->
+  <section id="sekce-denik" class="sekce">
+    <h2>Deník krmení</h2>
+    <label for="denik-vyber-psa">Pes</label>
+    <select id="denik-vyber-psa" onchange="zmenaPsaDenik()"></select>
+
+    <form id="formular-zaznamu" class="formular-karta">
+      <input type="hidden" id="zaznam-id">
+      <label for="zaznam-datum">Datum</label>
+      <input type="date" id="zaznam-datum" required>
+
+      <label for="zaznam-cast-dne">Kdy</label>
+      <select id="zaznam-cast-dne">
+        <option value="rano">Ráno</option>
+        <option value="vecer">Večer</option>
+      </select>
+
+      <div id="denik-radky"></div>
+      <button type="button" class="tlacitko sekundarni" onclick="pridatRadekDeniku()">+ Přidat surovinu</button>
+
+      <button type="submit" class="tlacitko" id="zaznam-tlacitko-odeslat">Uložit záznam</button>
+      <button type="button" class="tlacitko sekundarni" id="zaznam-tlacitko-zrusit" hidden onclick="zrusitEditaciZaznamu()">Zrušit úpravu</button>
+    </form>
+
+    <h3>Zapsané záznamy</h3>
+    <div id="seznam-zaznamu"></div>
+
+    <h3>Přehled výživy</h3>
+    <div id="denik-cap-souhrn" class="cap-radek"></div>
+    <div class="prepinac-obdobi">
+      <button type="button" class="aktivni" data-rezim="den" onclick="prepniRezimObdobi('den')">Den</button>
+      <button type="button" data-rezim="tyden" onclick="prepniRezimObdobi('tyden')">Týden</button>
+      <button type="button" data-rezim="mesic" onclick="prepniRezimObdobi('mesic')">Měsíc</button>
+    </div>
+    <div class="navigace-obdobi">
+      <button type="button" onclick="posunObdobi(-1)" aria-label="Předchozí období">◀</button>
+      <span id="denik-obdobi-popisek"></span>
+      <button type="button" onclick="posunObdobi(1)" aria-label="Další období">▶</button>
+    </div>
+    <div id="denik-prehled"></div>
+  </section>
+
+  <!-- ==== SEKCE: ZÁLOHA ==== -->
+  <section id="sekce-zaloha" class="sekce">
+    <h2>Záloha a přenos mezi zařízeními</h2>
+    <div class="formular-karta">
+      <p>Appka si data (psi, suroviny, recepty, deník) pamatuje jen v tomto prohlížeči na tomto
+        zařízení. Abys měla stejná data na PC, telefonu i tabletu, přenášej je mezi nimi zálohou:</p>
+      <ol class="napoveda-kroky">
+        <li>Na zařízení s aktuálními daty klepni na <strong>Stáhnout zálohu</strong>.</li>
+        <li>Stažený soubor přenes na druhé zařízení (e-mailem, přes cloud nebo kabelem).</li>
+        <li>Na druhém zařízení klepni na <strong>Nahrát zálohu</strong> a vyber ten soubor.</li>
+      </ol>
+      <button type="button" class="tlacitko" onclick="exportZalohy()">Stáhnout zálohu</button>
+      <label for="soubor-zalohy" class="tlacitko sekundarni">Nahrát zálohu</label>
+      <input type="file" id="soubor-zalohy" accept=".json,application/json" hidden onchange="importZalohy(this)">
+      <div id="info-zaloha" class="text-slaby" style="margin-top:14px;"></div>
+    </div>
+  </section>
+
+</main>
+
+<nav class="taby">
+  <button class="tab-tlacitko aktivni" data-sekce="psi" onclick="zobrazSekci('psi')">Psi</button>
+  <button class="tab-tlacitko" data-sekce="suroviny" onclick="zobrazSekci('suroviny')">Suroviny</button>
+  <button class="tab-tlacitko" data-sekce="recepty" onclick="zobrazSekci('recepty')">Recepty</button>
+  <button class="tab-tlacitko" data-sekce="denik" onclick="zobrazSekci('denik')">Deník</button>
+  <button class="tab-tlacitko" data-sekce="zaloha" onclick="zobrazSekci('zaloha')">Záloha</button>
+</nav>
+
+<!-- ==== PANEL: FORMULÁŘ PSA ==== -->
+<div class="prekryv" id="prekryv-pes" hidden onclick="if(event.target===this) zavriPanel('pes')">
+  <div class="panel">
+    <div class="panel-hlavicka">
+      <h3 id="panel-pes-nadpis">Přidat psa</h3>
+      <button type="button" class="tlacitko-zavrit" onclick="zavriPanel('pes')" aria-label="Zavřít">✕</button>
+    </div>
+    <form id="formular-psa">
+      <input type="hidden" id="pes-id">
+      <label for="pes-jmeno">Jméno psa</label>
+      <input type="text" id="pes-jmeno" required>
+
+      <label for="pes-foto">Fotka psa (nepovinné)</label>
+      <input type="file" id="pes-foto" accept="image/*" onchange="zpracujFotku(this)">
+      <div id="pes-foto-nahled" class="foto-nahled-obal"></div>
+
+      <h3>Cílová denní dávka živin</h3>
+      <div class="mrizka-2">
+        <div>
+          <label for="pes-cil-kcal">Kalorie (kcal)</label>
+          <input type="number" id="pes-cil-kcal" min="0" step="any" required>
+        </div>
+        <div>
+          <label for="pes-cil-bilkoviny">Bílkoviny (g)</label>
+          <input type="number" id="pes-cil-bilkoviny" min="0" step="any" value="0">
+        </div>
+        <div>
+          <label for="pes-cil-tuky">Tuky (g)</label>
+          <input type="number" id="pes-cil-tuky" min="0" step="any" value="0">
+        </div>
+        <div>
+          <label for="pes-cil-ca">Vápník Ca (mg)</label>
+          <input type="number" id="pes-cil-ca" min="0" step="any" value="0">
+        </div>
+        <div>
+          <label for="pes-cil-p">Fosfor P (mg)</label>
+          <input type="number" id="pes-cil-p" min="0" step="any" value="0">
+        </div>
+        <div>
+          <label for="pes-cil-mg">Hořčík Mg (mg)</label>
+          <input type="number" id="pes-cil-mg" min="0" step="any" value="0">
+        </div>
+      </div>
+
+      <button type="submit" class="tlacitko" id="pes-tlacitko-odeslat">Přidat psa</button>
+    </form>
+  </div>
+</div>
+
+<!-- ==== PANEL: FORMULÁŘ SUROVINY ==== -->
+<div class="prekryv" id="prekryv-surovina" hidden onclick="if(event.target===this) zavriPanel('surovina')">
+  <div class="panel">
+    <div class="panel-hlavicka">
+      <h3 id="panel-surovina-nadpis">Přidat surovinu</h3>
+      <button type="button" class="tlacitko-zavrit" onclick="zavriPanel('surovina')" aria-label="Zavřít">✕</button>
+    </div>
+    <form id="formular-suroviny">
+      <input type="hidden" id="surovina-id">
+      <label for="surovina-nazev">Název suroviny</label>
+      <input type="text" id="surovina-nazev" required>
+      <p class="napoveda">Hodnoty zadávej vždy na 100 g suroviny.</p>
+
+      <div class="mrizka-2">
+        <div>
+          <label for="surovina-kcal">Kalorie (kcal/100g)</label>
+          <input type="number" id="surovina-kcal" min="0" step="any" required>
+        </div>
+        <div>
+          <label for="surovina-bilkoviny">Bílkoviny (g/100g)</label>
+          <input type="number" id="surovina-bilkoviny" min="0" step="any" value="0">
+        </div>
+        <div>
+          <label for="surovina-tuky">Tuky (g/100g)</label>
+          <input type="number" id="surovina-tuky" min="0" step="any" value="0">
+        </div>
+        <div>
+          <label for="surovina-ca">Vápník Ca (mg/100g)</label>
+          <input type="number" id="surovina-ca" min="0" step="any" value="0">
+        </div>
+        <div>
+          <label for="surovina-p">Fosfor P (mg/100g)</label>
+          <input type="number" id="surovina-p" min="0" step="any" value="0">
+        </div>
+        <div>
+          <label for="surovina-mg">Hořčík Mg (mg/100g)</label>
+          <input type="number" id="surovina-mg" min="0" step="any" value="0">
+        </div>
+      </div>
+
+      <button type="submit" class="tlacitko" id="surovina-tlacitko-odeslat">Přidat surovinu</button>
+    </form>
+  </div>
+</div>
+
+<!-- ==== PANEL: FORMULÁŘ RECEPTU ==== -->
+<div class="prekryv" id="prekryv-recept" hidden onclick="if(event.target===this) zavriPanel('recept')">
+  <div class="panel">
+    <div class="panel-hlavicka">
+      <h3 id="panel-recept-nadpis">Přidat recept</h3>
+      <button type="button" class="tlacitko-zavrit" onclick="zavriPanel('recept')" aria-label="Zavřít">✕</button>
+    </div>
+    <form id="formular-receptu">
+      <input type="hidden" id="recept-id">
+      <label for="recept-nazev">Název receptu</label>
+      <input type="text" id="recept-nazev" placeholder="např. Běžný den" required>
+
+      <div id="recept-radky"></div>
+      <button type="button" class="tlacitko sekundarni" onclick="pridatRadekReceptu()">+ Přidat surovinu</button>
+      <p id="recept-soucet">Součet procent: 0 %</p>
+
+      <button type="submit" class="tlacitko" id="recept-tlacitko-odeslat" disabled>Uložit recept</button>
+    </form>
+  </div>
+</div>
+
+<script>
+// ===================================================================
+// 1. KONSTANTY A STAV APLIKACE
+// ===================================================================
+const KLIC_ULOZISTE = 'krmnyDenikData';
+const KLIC_POSLEDNI_EXPORT = 'krmnyDenikPosledniExport';
+const KLIC_POSLEDNI_IMPORT = 'krmnyDenikPosledniImport';
+// Doporučené rozmezí poměru vápník:fosfor v psí stravě
+const CA_P_MIN = 1.2;
+const CA_P_MAX = 1.35;
+const NAZVY_MESICU = ['leden','únor','březen','duben','květen','červen','červenec','srpen','září','říjen','listopad','prosinec'];
+
+let appState = { verze: 1, psi: [], suroviny: [], recepty: [], denik: [] };
+let rezimObdobi = 'den';       // 'den' | 'tyden' | 'mesic'
+let kotevniDatum = '';         // datum, od kterého se počítá zobrazené období
+let docasnaFotoPsa;            // undefined = beze změny, null = odebrat, string (dataURL) = nová fotka
+
+// ===================================================================
+// 2. ULOŽIŠTĚ (localStorage)
+// ===================================================================
+function vychoziStav(){
+  return { verze: 1, psi: [], suroviny: [], recepty: [], denik: [] };
+}
+
+function nacistData(){
+  try{
+    const raw = localStorage.getItem(KLIC_ULOZISTE);
+    if(!raw) return vychoziStav();
+    const data = JSON.parse(raw);
+    if(!data || typeof data !== 'object') return vychoziStav();
+    return {
+      verze: 1,
+      psi: Array.isArray(data.psi) ? data.psi : [],
+      suroviny: Array.isArray(data.suroviny) ? data.suroviny : [],
+      recepty: Array.isArray(data.recepty) ? data.recepty : [],
+      denik: Array.isArray(data.denik) ? data.denik : []
+    };
+  } catch(e){
+    console.warn('Uložená data se nepodařilo přečíst, appka začíná prázdná.', e);
+    return vychoziStav();
+  }
+}
+
+function ulozitData(){
+  localStorage.setItem(KLIC_ULOZISTE, JSON.stringify(appState));
+}
+
+// ===================================================================
+// 3. POMOCNÉ FUNKCE (id, čísla, text, datum, ikony)
+// ===================================================================
+function vytvorId(){
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function cislo(idPrvku){
+  const hodnota = parseFloat(document.getElementById(idPrvku).value);
+  return isNaN(hodnota) ? 0 : hodnota;
+}
+
+function zaokrouhli(cislo, desetin){
+  const m = Math.pow(10, desetin);
+  return Math.round((cislo + Number.EPSILON) * m) / m;
+}
+
+function escapovatHtml(text){
+  const pomocny = document.createElement('div');
+  pomocny.textContent = text == null ? '' : String(text);
+  return pomocny.innerHTML;
+}
+
+function najdiPsa(id){ return appState.psi.find(p => p.id === id); }
+function najdiSurovinu(id){ return appState.suroviny.find(s => s.id === id); }
+
+function dnesniDatumIso(){ return isoZDatumu(new Date()); }
+function isoZDatumu(d){
+  const rok = d.getFullYear();
+  const mesic = String(d.getMonth() + 1).padStart(2, '0');
+  const den = String(d.getDate()).padStart(2, '0');
+  return `${rok}-${mesic}-${den}`;
+}
+function datumZIso(iso){
+  const [r, m, d] = iso.split('-').map(Number);
+  return new Date(r, m - 1, d);
+}
+function posunDatum(iso, pocetDni){
+  const d = datumZIso(iso);
+  d.setDate(d.getDate() + pocetDni);
+  return isoZDatumu(d);
+}
+function formatDatumCz(iso){
+  const d = datumZIso(iso);
+  return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`;
+}
+function formatDatumCasCz(isoDatumCas){
+  const d = new Date(isoDatumCas);
+  const datum = `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`;
+  const cas = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  return `${datum} ${cas}`;
+}
+function zacatekTydne(iso){
+  const d = datumZIso(iso);
+  const denVTydnu = (d.getDay() + 6) % 7; // 0 = pondělí
+  d.setDate(d.getDate() - denVTydnu);
+  return isoZDatumu(d);
+}
+function pocetDniVMesici(rok, mesicIndex){
+  return new Date(rok, mesicIndex + 1, 0).getDate();
+}
+
+// Drobné inline SVG ikonky (bez externích knihoven/fontů)
+function ikonaUpravit(){
+  return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
+}
+function ikonaSmazat(){
+  return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 20 7"></polyline><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"></path></svg>';
+}
+function ikonaSurovina(){
+  return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21c9 0 14-5 14-14 0-1 0-2-.3-3C10 4 5 9 5 18c0 1 0 2 .3 3Z"></path><path d="M5 21c3-6 6-9 12-12"></path></svg>';
+}
+function ikonaSnezenky(velikost){
+  const v = velikost || 20;
+  return `<svg viewBox="0 0 24 24" width="${v}" height="${v}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V10"></path><path d="M12 10c0-3 -2-3 -2-6a2 2 0 0 1 4 0c0 3 -2 3 -2 6Z"></path><path d="M9 15c-1.5 0-2.5 1-2.5 1"></path><path d="M15 15c1.5 0 2.5 1 2.5 1"></path></svg>`;
+}
+
+// ===================================================================
+// 4. VÝPOČTY ŽIVIN
+// ===================================================================
+function spocitejZivinyPolozek(polozky){
+  const sumy = { kcal:0, bilkoviny:0, tuky:0, ca:0, p:0, mg:0 };
+  polozky.forEach(polozka => {
+    const surovina = najdiSurovinu(polozka.surovinaId);
+    if(!surovina) return;
+    const faktor = polozka.gramy / 100;
+    sumy.kcal += surovina.kcal * faktor;
+    sumy.bilkoviny += surovina.bilkoviny * faktor;
+    sumy.tuky += surovina.tuky * faktor;
+    sumy.ca += surovina.ca * faktor;
+    sumy.p += surovina.p * faktor;
+    sumy.mg += surovina.mg * faktor;
+  });
+  return sumy;
+}
+
+function spocitejZivinyZaznamu(zaznamy){
+  const celkem = { kcal:0, bilkoviny:0, tuky:0, ca:0, p:0, mg:0 };
+  zaznamy.forEach(z => {
+    const sumy = spocitejZivinyPolozek(z.polozky);
+    for(const klic in celkem) celkem[klic] += sumy[klic];
+  });
+  return celkem;
+}
+
+function vyhodnotCaP(ca, p){
+  if(p <= 0) return { pomer: null, stav: 'zadne-udaje' };
+  const pomer = ca / p;
+  if(pomer < CA_P_MIN) return { pomer, stav: 'malo-vapniku' };
+  if(pomer > CA_P_MAX) return { pomer, stav: 'moc-vapniku' };
+  return { pomer, stav: 'ok' };
+}
+
+// ===================================================================
+// 5. RECEPTY — výpočet gramáže
+// ===================================================================
+function prepocitejGramazeReceptu(recept, pes){
+  return recept.polozky.map(polozka => {
+    const surovina = najdiSurovinu(polozka.surovinaId);
+    if(!surovina) return { nazev: '(smazaná surovina)', procento: polozka.procento, gramy: 0 };
+    const gramy = surovina.kcal > 0 ? (polozka.procento * pes.cil.kcal) / surovina.kcal : 0;
+    return { nazev: surovina.nazev, procento: polozka.procento, gramy };
+  });
+}
+
+// ===================================================================
+// 6. NAVIGACE MEZI SEKCEMI
+// ===================================================================
+function zobrazSekci(nazev){
+  document.querySelectorAll('.sekce').forEach(s => s.classList.remove('aktivni'));
+  document.getElementById('sekce-' + nazev).classList.add('aktivni');
+  document.querySelectorAll('.tab-tlacitko').forEach(b => b.classList.toggle('aktivni', b.dataset.sekce === nazev));
+
+  if(nazev === 'recepty'){
+    naplnSelectPsuRecepty();
+    vykresliSeznamReceptu();
+  }
+  if(nazev === 'denik'){
+    naplnSelectPsuDenik();
+    vykresliSeznamZaznamu();
+    vykresliPrehled();
+  }
+  window.scrollTo(0, 0);
+}
+
+// ===================================================================
+// 6b. PŘEKRYVNÉ PANELY (formuláře Psa / Suroviny / Receptu)
+// ===================================================================
+function otevriPanel(id){
+  document.getElementById('prekryv-' + id).hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+function zavriPanel(id){
+  document.getElementById('prekryv-' + id).hidden = true;
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape'){
+    zavriPanel('pes');
+    zavriPanel('surovina');
+    zavriPanel('recept');
+  }
+});
+
+// ===================================================================
+// 7. SEKCE PSI
+// ===================================================================
+function otevriPanelPridatPsa(){
+  zrusitEditaciPsa();
+  document.getElementById('panel-pes-nadpis').textContent = 'Přidat psa';
+  otevriPanel('pes');
+}
+
+function vykresliSeznamPsu(){
+  const kontejner = document.getElementById('seznam-psu');
+  if(appState.psi.length === 0){
+    kontejner.innerHTML = `<div class="prazdny-stav">${ikonaSnezenky(40)}<p>Zatím žádný pes.<br>Přidej prvního tlačítkem +.</p></div>`;
+    return;
+  }
+  kontejner.innerHTML = '<div class="seznam-radku">' + appState.psi.map(p => {
+    const avatar = p.foto
+      ? `<img src="${p.foto}" alt="${escapovatHtml(p.jmeno)}" class="avatar-radku">`
+      : `<div class="avatar-radku avatar-zastupny">${ikonaSnezenky(22)}</div>`;
+    return `
+      <div class="radek-seznamu">
+        ${avatar}
+        <div class="radek-obsah">
+          <strong>${escapovatHtml(p.jmeno)}</strong>
+          <div class="text-slaby">${zaokrouhli(p.cil.kcal,0)} kcal · B ${zaokrouhli(p.cil.bilkoviny,0)} · T ${zaokrouhli(p.cil.tuky,0)} · Ca ${zaokrouhli(p.cil.ca,0)} · P ${zaokrouhli(p.cil.p,0)} · Mg ${zaokrouhli(p.cil.mg,0)}</div>
+        </div>
+        <div class="radek-akce">
+          <button type="button" class="tlacitko-ikona" onclick="upravitPsa('${p.id}')" aria-label="Upravit psa ${escapovatHtml(p.jmeno)}">${ikonaUpravit()}</button>
+          <button type="button" class="tlacitko-ikona nebezpecna" onclick="smazatPsa('${p.id}')" aria-label="Smazat psa ${escapovatHtml(p.jmeno)}">${ikonaSmazat()}</button>
+        </div>
+      </div>`;
+  }).join('') + '</div>';
+}
+
+function zpracujFotku(input){
+  const soubor = input.files && input.files[0];
+  if(!soubor) return;
+  const cteni = new FileReader();
+  cteni.onload = (e) => {
+    const obrazek = new Image();
+    obrazek.onload = () => {
+      const VELIKOST = 200;
+      const platno = document.createElement('canvas');
+      platno.width = VELIKOST;
+      platno.height = VELIKOST;
+      const ctx = platno.getContext('2d');
+      const strana = Math.min(obrazek.width, obrazek.height);
+      const sx = (obrazek.width - strana) / 2;
+      const sy = (obrazek.height - strana) / 2;
+      ctx.drawImage(obrazek, sx, sy, strana, strana, 0, 0, VELIKOST, VELIKOST);
+      docasnaFotoPsa = platno.toDataURL('image/jpeg', 0.82);
+      zobrazNahledFotky(docasnaFotoPsa);
+    };
+    obrazek.src = e.target.result;
+  };
+  cteni.readAsDataURL(soubor);
+}
+
+function odebratFotkuFormular(){
+  docasnaFotoPsa = null;
+  document.getElementById('pes-foto').value = '';
+  zobrazNahledFotky(null);
+}
+
+function zobrazNahledFotky(dataUrl){
+  const kontejner = document.getElementById('pes-foto-nahled');
+  kontejner.innerHTML = dataUrl
+    ? `<img src="${dataUrl}" alt="Náhled fotky" class="nahled-fotky"><button type="button" class="tlacitko-maly" onclick="odebratFotkuFormular()">Odebrat fotku</button>`
+    : '';
+}
+
+function odeslatFormularPsa(e){
+  e.preventDefault();
+  const jmeno = document.getElementById('pes-jmeno').value.trim();
+  if(!jmeno){ alert('Zadej jméno psa.'); return; }
+  const cil = {
+    kcal: cislo('pes-cil-kcal'),
+    bilkoviny: cislo('pes-cil-bilkoviny'),
+    tuky: cislo('pes-cil-tuky'),
+    ca: cislo('pes-cil-ca'),
+    p: cislo('pes-cil-p'),
+    mg: cislo('pes-cil-mg')
+  };
+  const id = document.getElementById('pes-id').value;
+  if(id){
+    const pes = najdiPsa(id);
+    if(pes){
+      pes.jmeno = jmeno; pes.cil = cil;
+      if(docasnaFotoPsa !== undefined) pes.foto = docasnaFotoPsa;
+    }
+  } else {
+    appState.psi.push({ id: vytvorId(), jmeno, cil, foto: docasnaFotoPsa || null });
+  }
+  ulozitData();
+  zrusitEditaciPsa();
+  zavriPanel('pes');
+  vykresliVse();
+}
+
+function upravitPsa(id){
+  const pes = najdiPsa(id);
+  if(!pes) return;
+  document.getElementById('pes-id').value = pes.id;
+  document.getElementById('pes-jmeno').value = pes.jmeno;
+  document.getElementById('pes-cil-kcal').value = pes.cil.kcal;
+  document.getElementById('pes-cil-bilkoviny').value = pes.cil.bilkoviny;
+  document.getElementById('pes-cil-tuky').value = pes.cil.tuky;
+  document.getElementById('pes-cil-ca').value = pes.cil.ca;
+  document.getElementById('pes-cil-p').value = pes.cil.p;
+  document.getElementById('pes-cil-mg').value = pes.cil.mg;
+  document.getElementById('pes-foto').value = '';
+  docasnaFotoPsa = undefined;
+  zobrazNahledFotky(pes.foto || null);
+  document.getElementById('pes-tlacitko-odeslat').textContent = 'Uložit změny';
+  document.getElementById('panel-pes-nadpis').textContent = 'Upravit psa';
+  otevriPanel('pes');
+}
+
+function zrusitEditaciPsa(){
+  document.getElementById('formular-psa').reset();
+  document.getElementById('pes-id').value = '';
+  ['pes-cil-bilkoviny','pes-cil-tuky','pes-cil-ca','pes-cil-p','pes-cil-mg'].forEach(id => document.getElementById(id).value = 0);
+  docasnaFotoPsa = undefined;
+  zobrazNahledFotky(null);
+  document.getElementById('pes-tlacitko-odeslat').textContent = 'Přidat psa';
+}
+
+function smazatPsa(id){
+  const pes = najdiPsa(id);
+  if(!pes) return;
+  const pocetReceptu = appState.recepty.filter(r => r.psId === id).length;
+  const pocetZaznamu = appState.denik.filter(z => z.psId === id).length;
+  let zprava = `Opravdu smazat psa "${pes.jmeno}"?`;
+  if(pocetReceptu > 0 || pocetZaznamu > 0){
+    zprava += ` Smažou se i jeho recepty (${pocetReceptu}) a záznamy v deníku (${pocetZaznamu}).`;
+  }
+  if(!confirm(zprava)) return;
+  appState.psi = appState.psi.filter(p => p.id !== id);
+  appState.recepty = appState.recepty.filter(r => r.psId !== id);
+  appState.denik = appState.denik.filter(z => z.psId !== id);
+  ulozitData();
+  vykresliVse();
+}
+
+// ===================================================================
+// 8. SEKCE SUROVINY
+// ===================================================================
+function otevriPanelPridatSurovinu(){
+  zrusitEditaciSuroviny();
+  document.getElementById('panel-surovina-nadpis').textContent = 'Přidat surovinu';
+  otevriPanel('surovina');
+}
+
+function vykresliSeznamSurovin(){
+  const kontejner = document.getElementById('seznam-surovin');
+  if(appState.suroviny.length === 0){
+    kontejner.innerHTML = `<div class="prazdny-stav">${ikonaSnezenky(40)}<p>Zatím žádná surovina.<br>Přidej první tlačítkem +.</p></div>`;
+    return;
+  }
+  kontejner.innerHTML = '<div class="seznam-radku">' + appState.suroviny.map(s => `
+    <div class="radek-seznamu">
+      <div class="avatar-radku avatar-zastupny avatar-surovina">${ikonaSurovina()}</div>
+      <div class="radek-obsah">
+        <strong>${escapovatHtml(s.nazev)}</strong>
+        <div class="text-slaby">${zaokrouhli(s.kcal,0)} kcal · B ${zaokrouhli(s.bilkoviny,1)} · T ${zaokrouhli(s.tuky,1)} · Ca ${zaokrouhli(s.ca,0)} · P ${zaokrouhli(s.p,0)} · Mg ${zaokrouhli(s.mg,0)} /100g</div>
+      </div>
+      <div class="radek-akce">
+        <button type="button" class="tlacitko-ikona" onclick="upravitSurovinu('${s.id}')" aria-label="Upravit surovinu ${escapovatHtml(s.nazev)}">${ikonaUpravit()}</button>
+        <button type="button" class="tlacitko-ikona nebezpecna" onclick="smazatSurovinu('${s.id}')" aria-label="Smazat surovinu ${escapovatHtml(s.nazev)}">${ikonaSmazat()}</button>
+      </div>
+    </div>`).join('') + '</div>';
+}
+
+function odeslatFormularSuroviny(e){
+  e.preventDefault();
+  const nazev = document.getElementById('surovina-nazev').value.trim();
+  if(!nazev){ alert('Zadej název suroviny.'); return; }
+  const kcal = cislo('surovina-kcal');
+  if(kcal <= 0){ alert('Kalorická hodnota musí být větší než 0.'); return; }
+  const data = {
+    nazev,
+    kcal,
+    bilkoviny: cislo('surovina-bilkoviny'),
+    tuky: cislo('surovina-tuky'),
+    ca: cislo('surovina-ca'),
+    p: cislo('surovina-p'),
+    mg: cislo('surovina-mg')
+  };
+  const id = document.getElementById('surovina-id').value;
+  if(id){
+    const surovina = najdiSurovinu(id);
+    if(surovina) Object.assign(surovina, data);
+  } else {
+    appState.suroviny.push({ id: vytvorId(), ...data });
+  }
+  ulozitData();
+  zrusitEditaciSuroviny();
+  zavriPanel('surovina');
+  vykresliVse();
+}
+
+function upravitSurovinu(id){
+  const s = najdiSurovinu(id);
+  if(!s) return;
+  document.getElementById('surovina-id').value = s.id;
+  document.getElementById('surovina-nazev').value = s.nazev;
+  document.getElementById('surovina-kcal').value = s.kcal;
+  document.getElementById('surovina-bilkoviny').value = s.bilkoviny;
+  document.getElementById('surovina-tuky').value = s.tuky;
+  document.getElementById('surovina-ca').value = s.ca;
+  document.getElementById('surovina-p').value = s.p;
+  document.getElementById('surovina-mg').value = s.mg;
+  document.getElementById('surovina-tlacitko-odeslat').textContent = 'Uložit změny';
+  document.getElementById('panel-surovina-nadpis').textContent = 'Upravit surovinu';
+  otevriPanel('surovina');
+}
+
+function zrusitEditaciSuroviny(){
+  document.getElementById('formular-suroviny').reset();
+  document.getElementById('surovina-id').value = '';
+  ['surovina-bilkoviny','surovina-tuky','surovina-ca','surovina-p','surovina-mg'].forEach(id => document.getElementById(id).value = 0);
+  document.getElementById('surovina-tlacitko-odeslat').textContent = 'Přidat surovinu';
+}
+
+function smazatSurovinu(id){
+  const s = najdiSurovinu(id);
+  if(!s) return;
+  const receptyPouzite = appState.recepty.filter(r => r.polozky.some(p => p.surovinaId === id));
+  const zaznamyPouzite = appState.denik.filter(z => z.polozky.some(p => p.surovinaId === id));
+  let zprava = `Opravdu smazat surovinu "${s.nazev}"?`;
+  if(receptyPouzite.length > 0 || zaznamyPouzite.length > 0){
+    zprava += ` Je použitá v ${receptyPouzite.length} receptech a ${zaznamyPouzite.length} záznamech deníku — odebere se odtud.`;
+  }
+  if(!confirm(zprava)) return;
+  appState.suroviny = appState.suroviny.filter(x => x.id !== id);
+  appState.recepty.forEach(r => { r.polozky = r.polozky.filter(p => p.surovinaId !== id); });
+  appState.denik.forEach(z => { z.polozky = z.polozky.filter(p => p.surovinaId !== id); });
+  ulozitData();
+  vykresliVse();
+}
+
+// ===================================================================
+// 9. SEKCE RECEPTY
+// ===================================================================
+function vytvorOptionsSurovin(vybranaId){
+  if(appState.suroviny.length === 0) return '<option value="">— nejdřív přidej surovinu —</option>';
+  return appState.suroviny.map(s => `<option value="${s.id}" ${s.id === vybranaId ? 'selected' : ''}>${escapovatHtml(s.nazev)}</option>`).join('');
+}
+
+function naplnSelectPsuRecepty(){
+  const select = document.getElementById('recept-vyber-psa');
+  const predchozi = select.value;
+  if(appState.psi.length === 0){
+    select.innerHTML = '<option value="">— nejdřív přidej psa —</option>';
+  } else {
+    select.innerHTML = appState.psi.map(p => `<option value="${p.id}">${escapovatHtml(p.jmeno)}</option>`).join('');
+    if(appState.psi.some(p => p.id === predchozi)) select.value = predchozi;
+  }
+}
+
+function zmenaPsaRecepty(){
+  vykresliSeznamReceptu();
+}
+
+function otevriPanelPridatRecept(){
+  const psId = document.getElementById('recept-vyber-psa').value;
+  if(!psId){ alert('Nejdřív přidej psa v sekci Psi.'); return; }
+  if(appState.suroviny.length === 0){ alert('Nejdřív přidej alespoň jednu surovinu v sekci Suroviny.'); return; }
+  zrusitEditaciReceptu();
+  document.getElementById('panel-recept-nadpis').textContent = 'Přidat recept';
+  otevriPanel('recept');
+}
+
+function pridatRadekReceptu(surovinaId = '', procento = ''){
+  if(appState.suroviny.length === 0){
+    alert('Nejdřív přidej alespoň jednu surovinu v sekci Suroviny.');
+    return;
+  }
+  const kontejner = document.getElementById('recept-radky');
+  const radek = document.createElement('div');
+  radek.className = 'radek-polozky';
+  radek.innerHTML = `
+    <select class="recept-surovina">${vytvorOptionsSurovin(surovinaId)}</select>
+    <input type="number" class="recept-procento" min="0" max="100" step="any" placeholder="%" value="${procento}">
+    <button type="button" class="tlacitko-odebrat" onclick="this.parentElement.remove(); soucetProcentFormulareReceptu();">✕</button>
+  `;
+  kontejner.appendChild(radek);
+  radek.querySelector('.recept-procento').addEventListener('input', soucetProcentFormulareReceptu);
+  soucetProcentFormulareReceptu();
+}
+
+function soucetProcentFormulareReceptu(){
+  const inputy = document.querySelectorAll('#recept-radky .recept-procento');
+  let soucet = 0;
+  inputy.forEach(i => soucet += (parseFloat(i.value) || 0));
+  const el = document.getElementById('recept-soucet');
+  el.textContent = `Součet procent: ${zaokrouhli(soucet,1)} %`;
+  const tlacitko = document.getElementById('recept-tlacitko-odeslat');
+  if(inputy.length > 0 && Math.abs(soucet - 100) < 0.5){
+    el.style.color = 'var(--barva-ok)';
+    tlacitko.disabled = false;
+  } else {
+    el.style.color = 'var(--barva-varovani)';
+    tlacitko.disabled = true;
+  }
+}
+
+function odeslatFormularReceptu(e){
+  e.preventDefault();
+  const psId = document.getElementById('recept-vyber-psa').value;
+  if(!psId){ alert('Nejdřív přidej psa v sekci Psi.'); return; }
+  const nazev = document.getElementById('recept-nazev').value.trim();
+  if(!nazev){ alert('Zadej název receptu.'); return; }
+  const radky = document.querySelectorAll('#recept-radky .radek-polozky');
+  const polozky = [];
+  radky.forEach(r => {
+    const surovinaId = r.querySelector('.recept-surovina').value;
+    const procento = parseFloat(r.querySelector('.recept-procento').value) || 0;
+    if(surovinaId && procento > 0) polozky.push({ surovinaId, procento });
+  });
+  if(polozky.length === 0){ alert('Přidej aspoň jednu surovinu do receptu.'); return; }
+  const soucet = polozky.reduce((s, p) => s + p.procento, 0);
+  if(Math.abs(soucet - 100) >= 0.5){ alert('Součet procent musí být 100 %.'); return; }
+
+  const id = document.getElementById('recept-id').value;
+  if(id){
+    const recept = appState.recepty.find(r => r.id === id);
+    if(recept){ recept.nazev = nazev; recept.polozky = polozky; recept.psId = psId; }
+  } else {
+    appState.recepty.push({ id: vytvorId(), psId, nazev, polozky });
+  }
+  ulozitData();
+  zrusitEditaciReceptu();
+  zavriPanel('recept');
+  vykresliSeznamReceptu();
+}
+
+function upravitRecept(id){
+  const recept = appState.recepty.find(r => r.id === id);
+  if(!recept) return;
+  document.getElementById('recept-vyber-psa').value = recept.psId;
+  document.getElementById('recept-id').value = recept.id;
+  document.getElementById('recept-nazev').value = recept.nazev;
+  document.getElementById('recept-radky').innerHTML = '';
+  recept.polozky.forEach(p => pridatRadekReceptu(p.surovinaId, p.procento));
+  document.getElementById('recept-tlacitko-odeslat').textContent = 'Uložit změny';
+  document.getElementById('panel-recept-nadpis').textContent = 'Upravit recept';
+  vykresliSeznamReceptu();
+  otevriPanel('recept');
+}
+
+function zrusitEditaciReceptu(){
+  document.getElementById('formular-receptu').reset();
+  document.getElementById('recept-id').value = '';
+  document.getElementById('recept-radky').innerHTML = '';
+  document.getElementById('recept-tlacitko-odeslat').textContent = 'Uložit recept';
+  soucetProcentFormulareReceptu();
+}
+
+function smazatRecept(id){
+  if(!confirm('Opravdu smazat tento recept?')) return;
+  appState.recepty = appState.recepty.filter(r => r.id !== id);
+  ulozitData();
+  vykresliSeznamReceptu();
+}
+
+function vykresliSeznamReceptu(){
+  const psId = document.getElementById('recept-vyber-psa').value;
+  const kontejner = document.getElementById('seznam-receptu');
+  const pes = najdiPsa(psId);
+  if(!pes){
+    kontejner.innerHTML = '<p class="prazdny-stav">Nejdřív přidej psa v sekci Psi.</p>';
+    return;
+  }
+  const recepty = appState.recepty.filter(r => r.psId === psId);
+  if(recepty.length === 0){
+    kontejner.innerHTML = '<p class="prazdny-stav">Zatím žádný recept pro tohoto psa.</p>';
+    return;
+  }
+  kontejner.innerHTML = recepty.map(r => {
+    const vypocet = prepocitejGramazeReceptu(r, pes);
+    const soucetProcent = r.polozky.reduce((s, p) => s + p.procento, 0);
+    const tridaOdznaku = Math.abs(soucetProcent - 100) < 0.5 ? 'odznak-ok' : 'odznak-varovani';
+    const radkyHtml = vypocet.map(v => `<tr><td>${escapovatHtml(v.nazev)}</td><td>${zaokrouhli(v.procento,1)} %</td><td>${zaokrouhli(v.gramy,1)} g</td></tr>`).join('');
+    return `
+      <div class="karta karta-sloupec">
+        <div class="karta-hlavicka">
+          <strong>${escapovatHtml(r.nazev)}</strong>
+          <span class="odznak ${tridaOdznaku}">${zaokrouhli(soucetProcent,1)} %</span>
+        </div>
+        <table>
+          <thead><tr><th>Surovina</th><th>%</th><th>g/den</th></tr></thead>
+          <tbody>${radkyHtml}</tbody>
+        </table>
+        <div class="karta-akce">
+          <button type="button" class="tlacitko-ikona" onclick="upravitRecept('${r.id}')" aria-label="Upravit recept ${escapovatHtml(r.nazev)}">${ikonaUpravit()}</button>
+          <button type="button" class="tlacitko-ikona nebezpecna" onclick="smazatRecept('${r.id}')" aria-label="Smazat recept ${escapovatHtml(r.nazev)}">${ikonaSmazat()}</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ===================================================================
+// 10. SEKCE DENÍK — zápis záznamů
+// ===================================================================
+function naplnSelectPsuDenik(){
+  const select = document.getElementById('denik-vyber-psa');
+  const predchozi = select.value;
+  if(appState.psi.length === 0){
+    select.innerHTML = '<option value="">— nejdřív přidej psa —</option>';
+  } else {
+    select.innerHTML = appState.psi.map(p => `<option value="${p.id}">${escapovatHtml(p.jmeno)}</option>`).join('');
+    if(appState.psi.some(p => p.id === predchozi)) select.value = predchozi;
+  }
+}
+
+function zmenaPsaDenik(){
+  zrusitEditaciZaznamu();
+  vykresliSeznamZaznamu();
+  vykresliPrehled();
+}
+
+function pridatRadekDeniku(surovinaId = '', gramy = ''){
+  if(appState.suroviny.length === 0){
+    alert('Nejdřív přidej alespoň jednu surovinu v sekci Suroviny.');
+    return;
+  }
+  const kontejner = document.getElementById('denik-radky');
+  const radek = document.createElement('div');
+  radek.className = 'radek-polozky';
+  radek.innerHTML = `
+    <select class="denik-surovina">${vytvorOptionsSurovin(surovinaId)}</select>
+    <input type="number" class="denik-gramy" min="0" step="any" placeholder="gramy" value="${gramy}">
+    <button type="button" class="tlacitko-odebrat" onclick="this.parentElement.remove();">✕</button>
+  `;
+  kontejner.appendChild(radek);
+}
+
+function odeslatFormularZaznamu(e){
+  e.preventDefault();
+  const psId = document.getElementById('denik-vyber-psa').value;
+  if(!psId){ alert('Nejdřív přidej psa v sekci Psi.'); return; }
+  const datum = document.getElementById('zaznam-datum').value;
+  if(!datum){ alert('Vyber datum.'); return; }
+  const castDne = document.getElementById('zaznam-cast-dne').value;
+  const radky = document.querySelectorAll('#denik-radky .radek-polozky');
+  const polozky = [];
+  radky.forEach(r => {
+    const surovinaId = r.querySelector('.denik-surovina').value;
+    const gramy = parseFloat(r.querySelector('.denik-gramy').value) || 0;
+    if(surovinaId && gramy > 0) polozky.push({ surovinaId, gramy });
+  });
+  if(polozky.length === 0){ alert('Přidej aspoň jednu surovinu se zadanými gramy.'); return; }
+
+  const id = document.getElementById('zaznam-id').value;
+  if(id){
+    const zaznam = appState.denik.find(z => z.id === id);
+    if(zaznam){ zaznam.datum = datum; zaznam.psId = psId; zaznam.castDne = castDne; zaznam.polozky = polozky; }
+  } else {
+    appState.denik.push({ id: vytvorId(), datum, psId, castDne, polozky });
+  }
+  ulozitData();
+  zrusitEditaciZaznamu();
+  vykresliSeznamZaznamu();
+  vykresliPrehled();
+}
+
+function upravitZaznamDeniku(id){
+  const zaznam = appState.denik.find(z => z.id === id);
+  if(!zaznam) return;
+  document.getElementById('denik-vyber-psa').value = zaznam.psId;
+  document.getElementById('zaznam-id').value = zaznam.id;
+  document.getElementById('zaznam-datum').value = zaznam.datum;
+  document.getElementById('zaznam-cast-dne').value = zaznam.castDne || 'rano';
+  document.getElementById('denik-radky').innerHTML = '';
+  zaznam.polozky.forEach(p => pridatRadekDeniku(p.surovinaId, p.gramy));
+  document.getElementById('zaznam-tlacitko-odeslat').textContent = 'Uložit změny';
+  document.getElementById('zaznam-tlacitko-zrusit').hidden = false;
+  vykresliSeznamZaznamu();
+  document.getElementById('formular-zaznamu').scrollIntoView({ behavior: 'smooth' });
+}
+
+function zrusitEditaciZaznamu(){
+  document.getElementById('formular-zaznamu').reset();
+  document.getElementById('zaznam-id').value = '';
+  document.getElementById('denik-radky').innerHTML = '';
+  document.getElementById('zaznam-datum').value = dnesniDatumIso();
+  document.getElementById('zaznam-cast-dne').value = 'rano';
+  document.getElementById('zaznam-tlacitko-odeslat').textContent = 'Uložit záznam';
+  document.getElementById('zaznam-tlacitko-zrusit').hidden = true;
+}
+
+function smazatZaznamDeniku(id){
+  if(!confirm('Opravdu smazat tento záznam?')) return;
+  appState.denik = appState.denik.filter(z => z.id !== id);
+  ulozitData();
+  vykresliSeznamZaznamu();
+  vykresliPrehled();
+}
+
+function vykresliSeznamZaznamu(){
+  const psId = document.getElementById('denik-vyber-psa').value;
+  const kontejner = document.getElementById('seznam-zaznamu');
+  const popisyCastiDne = { rano: 'Ráno', vecer: 'Večer' };
+  const zaznamy = appState.denik.filter(z => z.psId === psId).sort((a, b) => {
+    if(a.datum !== b.datum) return b.datum.localeCompare(a.datum);
+    if(a.castDne === b.castDne) return 0;
+    return a.castDne === 'rano' ? -1 : 1;
+  });
+  if(zaznamy.length === 0){
+    kontejner.innerHTML = '<p class="prazdny-stav">Zatím žádné záznamy.</p>';
+    return;
+  }
+  kontejner.innerHTML = zaznamy.map(z => {
+    const popisPolozek = z.polozky.map(p => {
+      const s = najdiSurovinu(p.surovinaId);
+      return `${s ? escapovatHtml(s.nazev) : '(smazaná surovina)'} ${zaokrouhli(p.gramy,1)} g`;
+    }).join(', ');
+    const castDne = popisyCastiDne[z.castDne] || 'Ráno';
+    return `
+      <div class="karta">
+        <div>
+          <strong>${formatDatumCz(z.datum)} — ${castDne}</strong>
+          <div class="text-slaby">${popisPolozek}</div>
+        </div>
+        <div class="karta-akce">
+          <button type="button" class="tlacitko-ikona" onclick="upravitZaznamDeniku('${z.id}')" aria-label="Upravit záznam">${ikonaUpravit()}</button>
+          <button type="button" class="tlacitko-ikona nebezpecna" onclick="smazatZaznamDeniku('${z.id}')" aria-label="Smazat záznam">${ikonaSmazat()}</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ===================================================================
+// 11. SEKCE DENÍK — přehledy den / týden / měsíc
+// ===================================================================
+function prepniRezimObdobi(rezim){
+  rezimObdobi = rezim;
+  document.querySelectorAll('.prepinac-obdobi button').forEach(b => b.classList.toggle('aktivni', b.dataset.rezim === rezim));
+  vykresliPrehled();
+}
+
+function posunObdobi(smer){
+  if(rezimObdobi === 'den'){
+    kotevniDatum = posunDatum(kotevniDatum, smer);
+  } else if(rezimObdobi === 'tyden'){
+    kotevniDatum = posunDatum(kotevniDatum, smer * 7);
+  } else {
+    const d = datumZIso(kotevniDatum);
+    const novy = new Date(d.getFullYear(), d.getMonth() + smer, 1);
+    kotevniDatum = isoZDatumu(novy);
+  }
+  vykresliPrehled();
+}
+
+function ziskejRozsahProRezim(rezim, kotva){
+  if(rezim === 'den'){
+    return { od: kotva, do: kotva, pocetDni: 1, popisek: formatDatumCz(kotva) };
+  }
+  if(rezim === 'tyden'){
+    const od = zacatekTydne(kotva);
+    const doD = posunDatum(od, 6);
+    return { od, do: doD, pocetDni: 7, popisek: `${formatDatumCz(od)} – ${formatDatumCz(doD)}` };
+  }
+  const d = datumZIso(kotva);
+  const rok = d.getFullYear(), mesic = d.getMonth();
+  const pocetDni = pocetDniVMesici(rok, mesic);
+  const od = isoZDatumu(new Date(rok, mesic, 1));
+  const doD = isoZDatumu(new Date(rok, mesic, pocetDni));
+  return { od, do: doD, pocetDni, popisek: `${NAZVY_MESICU[mesic]} ${rok}` };
+}
+
+function ziskejRozsahObdobi(){
+  return ziskejRozsahProRezim(rezimObdobi, kotevniDatum);
+}
+
+// Souhrn poměru Ca:P za dnešek, aktuální týden a aktuální měsíc — nezávisle na
+// přepínači Den/Týden/Měsíc a na tom, jak si uživatel prochází historii šipkami.
+function vyhodnotCaPZaRozsah(psId, rozsah){
+  const zaznamy = appState.denik.filter(z => z.psId === psId && z.datum >= rozsah.od && z.datum <= rozsah.do);
+  const snedeno = spocitejZivinyZaznamu(zaznamy);
+  return vyhodnotCaP(snedeno.ca, snedeno.p);
+}
+
+function vykresliCaPSouhrn(){
+  const psId = document.getElementById('denik-vyber-psa').value;
+  const kontejner = document.getElementById('denik-cap-souhrn');
+  const pes = najdiPsa(psId);
+  if(!pes){ kontejner.innerHTML = ''; return; }
+
+  const dnes = dnesniDatumIso();
+  const obdobi = [
+    { nazev: 'Den', rozsah: ziskejRozsahProRezim('den', dnes) },
+    { nazev: 'Týden', rozsah: ziskejRozsahProRezim('tyden', dnes) },
+    { nazev: 'Měsíc', rozsah: ziskejRozsahProRezim('mesic', dnes) }
+  ];
+
+  kontejner.innerHTML = obdobi.map(o => {
+    const vyhodnoceni = vyhodnotCaPZaRozsah(psId, o.rozsah);
+    let trida = 'cap-neznamo';
+    let text = '—';
+    if(vyhodnoceni.stav !== 'zadne-udaje'){
+      text = `Ca/P = ${vyhodnoceni.pomer.toFixed(2).replace('.', ',')}`;
+      if(vyhodnoceni.stav === 'ok') trida = 'cap-ok';
+      else if(vyhodnoceni.stav === 'malo-vapniku') trida = 'cap-malo';
+      else trida = 'cap-moc';
+    }
+    return `<div class="cap-polozka"><span class="cap-nazev">${o.nazev}</span><span class="cap-hodnota ${trida}">${text}</span></div>`;
+  }).join('');
+}
+
+function vykresliPrehled(){
+  const psId = document.getElementById('denik-vyber-psa').value;
+  const pes = najdiPsa(psId);
+  const kontejner = document.getElementById('denik-prehled');
+  const rozsah = ziskejRozsahObdobi();
+  document.getElementById('denik-obdobi-popisek').textContent = rozsah.popisek;
+  vykresliCaPSouhrn();
+
+  if(!pes){
+    kontejner.innerHTML = '<p class="prazdny-stav">Nejdřív přidej psa.</p>';
+    return;
+  }
+
+  const zaznamy = appState.denik.filter(z => z.psId === psId && z.datum >= rozsah.od && z.datum <= rozsah.do);
+  const snedeno = spocitejZivinyZaznamu(zaznamy);
+  const cil = {
+    kcal: pes.cil.kcal * rozsah.pocetDni,
+    bilkoviny: pes.cil.bilkoviny * rozsah.pocetDni,
+    tuky: pes.cil.tuky * rozsah.pocetDni,
+    ca: pes.cil.ca * rozsah.pocetDni,
+    p: pes.cil.p * rozsah.pocetDni,
+    mg: pes.cil.mg * rozsah.pocetDni
+  };
+
+  const radkyZivin = [
+    { klic: 'kcal', nazev: 'Kalorie (kcal)' },
+    { klic: 'bilkoviny', nazev: 'Bílkoviny (g)' },
+    { klic: 'tuky', nazev: 'Tuky (g)' },
+    { klic: 'ca', nazev: 'Vápník Ca (mg)' },
+    { klic: 'p', nazev: 'Fosfor P (mg)' },
+    { klic: 'mg', nazev: 'Hořčík Mg (mg)' }
+  ];
+
+  const radkyHtml = radkyZivin.map(polozka => {
+    const hodnota = snedeno[polozka.klic];
+    const cilova = cil[polozka.klic];
+    let trida = '';
+    let procentoText = '—';
+    if(cilova > 0){
+      const procento = hodnota / cilova * 100;
+      trida = (procento >= 90 && procento <= 110) ? 'stav-ok' : 'stav-varovani';
+      procentoText = `${zaokrouhli(procento,0)} %`;
+    }
+    return `<tr class="${trida}"><td>${polozka.nazev}</td><td>${zaokrouhli(hodnota,1)}</td><td>${zaokrouhli(cilova,1)}</td><td>${procentoText}</td></tr>`;
+  }).join('');
+
+  const vyhodnoceniCaP = vyhodnotCaP(snedeno.ca, snedeno.p);
+  let caPHtml;
+  if(vyhodnoceniCaP.stav === 'zadne-udaje'){
+    caPHtml = '<span class="odznak">Zatím bez údajů o vápníku/fosforu</span>';
+  } else {
+    const popisStavu = { 'ok': 'V pořádku', 'malo-vapniku': 'Málo vápníku vůči fosforu', 'moc-vapniku': 'Příliš mnoho vápníku vůči fosforu' };
+    const tridaOdznaku = vyhodnoceniCaP.stav === 'ok' ? 'odznak-ok' : 'odznak-varovani';
+    caPHtml = `<span class="odznak ${tridaOdznaku}">Ca : P = ${zaokrouhli(vyhodnoceniCaP.pomer,2)} : 1 — ${popisStavu[vyhodnoceniCaP.stav]}</span>`;
+  }
+
+  kontejner.innerHTML = `
+    <table>
+      <thead><tr><th>Živina</th><th>Snědeno</th><th>Cíl</th><th>%</th></tr></thead>
+      <tbody>${radkyHtml}</tbody>
+    </table>
+    <div class="pomer-cap">${caPHtml}</div>
+  `;
+}
+
+// ===================================================================
+// 12. ZÁLOHA — export / import
+// ===================================================================
+function vykresliInfoZaloha(){
+  const kontejner = document.getElementById('info-zaloha');
+  const posledniExport = localStorage.getItem(KLIC_POSLEDNI_EXPORT);
+  const posledniImport = localStorage.getItem(KLIC_POSLEDNI_IMPORT);
+  const radky = [];
+  radky.push(`Poslední stažená záloha: ${posledniExport ? formatDatumCasCz(posledniExport) : 'zatím žádná'}`);
+  radky.push(`Poslední nahraná záloha: ${posledniImport ? formatDatumCasCz(posledniImport) : 'zatím žádná'}`);
+  kontejner.innerHTML = radky.join('<br>');
+}
+
+function exportZalohy(){
+  const obsah = JSON.stringify(appState, null, 2);
+  const blob = new Blob([obsah], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const odkaz = document.createElement('a');
+  odkaz.href = url;
+  odkaz.download = `krmny-denik-zaloha-${dnesniDatumIso()}.json`;
+  document.body.appendChild(odkaz);
+  odkaz.click();
+  odkaz.remove();
+  URL.revokeObjectURL(url);
+  localStorage.setItem(KLIC_POSLEDNI_EXPORT, new Date().toISOString());
+  vykresliInfoZaloha();
+}
+
+function importZalohy(vstup){
+  const soubor = vstup.files && vstup.files[0];
+  if(!soubor) return;
+  const cteni = new FileReader();
+  cteni.onload = () => {
+    let data;
+    try{
+      data = JSON.parse(cteni.result);
+    } catch(e){
+      alert('Soubor se nepodařilo přečíst — není to platný soubor zálohy.');
+      vstup.value = '';
+      return;
+    }
+    if(!data || !Array.isArray(data.psi) || !Array.isArray(data.suroviny)){
+      alert('Soubor neobsahuje platná data zálohy.');
+      vstup.value = '';
+      return;
+    }
+    if(!confirm('Načtení zálohy přepíše všechna aktuální data v appce. Opravdu pokračovat?')){
+      vstup.value = '';
+      return;
+    }
+    appState = {
+      verze: 1,
+      psi: data.psi || [],
+      suroviny: data.suroviny || [],
+      recepty: Array.isArray(data.recepty) ? data.recepty : [],
+      denik: Array.isArray(data.denik) ? data.denik : []
+    };
+    ulozitData();
+    vykresliVse();
+    localStorage.setItem(KLIC_POSLEDNI_IMPORT, new Date().toISOString());
+    vykresliInfoZaloha();
+    alert('Záloha byla úspěšně načtena.');
+    vstup.value = '';
+  };
+  cteni.readAsText(soubor);
+}
+
+// ===================================================================
+// 13. CELKOVÉ PŘEKRESLENÍ A INICIALIZACE
+// ===================================================================
+function vykresliVse(){
+  vykresliSeznamPsu();
+  vykresliSeznamSurovin();
+  naplnSelectPsuRecepty();
+  vykresliSeznamReceptu();
+  naplnSelectPsuDenik();
+  vykresliSeznamZaznamu();
+  vykresliPrehled();
+  vykresliInfoZaloha();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  appState = nacistData();
+  kotevniDatum = dnesniDatumIso();
+  document.getElementById('zaznam-datum').value = dnesniDatumIso();
+
+  document.getElementById('formular-psa').addEventListener('submit', odeslatFormularPsa);
+  document.getElementById('formular-suroviny').addEventListener('submit', odeslatFormularSuroviny);
+  document.getElementById('formular-receptu').addEventListener('submit', odeslatFormularReceptu);
+  document.getElementById('formular-zaznamu').addEventListener('submit', odeslatFormularZaznamu);
+
+  vykresliVse();
+  soucetProcentFormulareReceptu();
+});
+</script>
+</body>
+</html>
