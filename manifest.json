@@ -1,0 +1,13 @@
+{
+  "name": "Prague Snowdrop",
+  "short_name": "Prague Snowdrop",
+  "description": "Krmný deník a přehled výživy pro psy",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F7F5F2",
+  "theme_color": "#D9695B",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
