@@ -238,6 +238,11 @@
   .cap-moc{ color:var(--barva-chyba); }
   .cap-neznamo{ color:var(--barva-textslaby); }
 
+  /* ===== 12b. ZELENINA — váha do misky per pes ===== */
+  .radek-miska{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .radek-miska span{ flex:1; }
+  .radek-miska input{ flex:1; }
+
   /* ===== 12. DENÍK — pruh psů s fotkami (přepínání/swipe) ===== */
   #denik-swipe-oblast{ touch-action: pan-y; }
   .pruh-psu{ display:flex; gap:14px; overflow-x:auto; padding:4px 2px 16px; -webkit-overflow-scrolling:touch; }
@@ -343,6 +348,41 @@
     <div id="denik-prehled"></div>
   </section>
 
+  <!-- ==== SEKCE: ZELENINA ==== -->
+  <section id="sekce-zelenina" class="sekce">
+    <h2>Zelenina — rozpočet mixu</h2>
+    <div class="formular-karta">
+      <p class="napoveda">Zadej suroviny a jejich celkovou váhu v namixované dávce, pak u každého psa váhu,
+        kterou jsi mu navážila do misky. Appka spočítá přesné množství každé suroviny na psa a zapíše je do deníku.</p>
+
+      <h3>Suroviny v dávce</h3>
+      <div id="zelenina-radky"></div>
+      <button type="button" class="tlacitko sekundarni" onclick="pridatRadekZeleninyRucne()">+ Přidat surovinu</button>
+      <p id="zelenina-soucet-davky" class="text-slaby">Celkem v dávce: 0 g</p>
+
+      <h3>Váha do misky (g)</h3>
+      <div id="zelenina-misky-psu"></div>
+      <p id="zelenina-vyuziti" class="text-slaby">Využito: 0 % dávky</p>
+
+      <h3>Kdy zapsat</h3>
+      <div class="mrizka-2">
+        <div>
+          <label for="zelenina-datum">Datum</label>
+          <input type="date" id="zelenina-datum">
+        </div>
+        <div>
+          <label for="zelenina-cast-dne">Kdy</label>
+          <select id="zelenina-cast-dne">
+            <option value="rano">Ráno</option>
+            <option value="vecer">Večer</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="button" class="tlacitko" onclick="zapsatZeleninuDoDeniku()">Zapsat do deníku</button>
+    </div>
+  </section>
+
   <!-- ==== SEKCE: ZÁLOHA ==== -->
   <section id="sekce-zaloha" class="sekce">
     <h2>Záloha a přenos mezi zařízeními</h2>
@@ -368,6 +408,7 @@
   <button class="tab-tlacitko" data-sekce="suroviny" onclick="zobrazSekci('suroviny')">Suroviny</button>
   <button class="tab-tlacitko" data-sekce="recepty" onclick="zobrazSekci('recepty')">Recepty</button>
   <button class="tab-tlacitko" data-sekce="denik" onclick="zobrazSekci('denik')">Deník</button>
+  <button class="tab-tlacitko" data-sekce="zelenina" onclick="zobrazSekci('zelenina')">Zelenina</button>
   <button class="tab-tlacitko" data-sekce="zaloha" onclick="zobrazSekci('zaloha')">Záloha</button>
 </nav>
 
@@ -509,7 +550,15 @@ let rozpracovaneZaznamyDeniku = {}; // { [psId]: { editaceId, datum, castDne, po
 // 2. ULOŽIŠTĚ (localStorage)
 // ===================================================================
 function vychoziStav(){
-  return { verze: 1, psi: [], suroviny: [], recepty: [], denik: [] };
+  return { verze: 1, psi: [], suroviny: [], recepty: [], denik: [], zelenina: { polozky: [], miskyPsu: {} } };
+}
+
+function normalizovatZeleninu(zelenina){
+  if(!zelenina || typeof zelenina !== 'object') return { polozky: [], miskyPsu: {} };
+  return {
+    polozky: Array.isArray(zelenina.polozky) ? zelenina.polozky : [],
+    miskyPsu: (zelenina.miskyPsu && typeof zelenina.miskyPsu === 'object') ? zelenina.miskyPsu : {}
+  };
 }
 
 function nacistData(){
@@ -523,7 +572,8 @@ function nacistData(){
       psi: Array.isArray(data.psi) ? data.psi : [],
       suroviny: Array.isArray(data.suroviny) ? data.suroviny : [],
       recepty: Array.isArray(data.recepty) ? data.recepty : [],
-      denik: Array.isArray(data.denik) ? data.denik : []
+      denik: Array.isArray(data.denik) ? data.denik : [],
+      zelenina: normalizovatZeleninu(data.zelenina)
     };
   } catch(e){
     console.warn('Uložená data se nepodařilo přečíst, appka začíná prázdná.', e);
@@ -674,6 +724,9 @@ function zobrazSekci(nazev){
   }
   if(nazev === 'denik'){
     inicializovatDenik();
+  }
+  if(nazev === 'zelenina'){
+    vykresliZeleninu();
   }
   window.scrollTo(0, 0);
 }
@@ -837,6 +890,7 @@ function smazatPsa(id){
   appState.psi = appState.psi.filter(p => p.id !== id);
   appState.recepty = appState.recepty.filter(r => r.psId !== id);
   appState.denik = appState.denik.filter(z => z.psId !== id);
+  delete appState.zelenina.miskyPsu[id];
   delete rozpracovaneZaznamyDeniku[id];
   ulozitData();
   vykresliVse();
@@ -927,14 +981,16 @@ function smazatSurovinu(id){
   if(!s) return;
   const receptyPouzite = appState.recepty.filter(r => r.polozky.some(p => p.surovinaId === id));
   const zaznamyPouzite = appState.denik.filter(z => z.polozky.some(p => p.surovinaId === id));
+  const vZeleninePouzita = appState.zelenina.polozky.some(p => p.surovinaId === id);
   let zprava = `Opravdu smazat surovinu "${s.nazev}"?`;
-  if(receptyPouzite.length > 0 || zaznamyPouzite.length > 0){
-    zprava += ` Je použitá v ${receptyPouzite.length} receptech a ${zaznamyPouzite.length} záznamech deníku — odebere se odtud.`;
+  if(receptyPouzite.length > 0 || zaznamyPouzite.length > 0 || vZeleninePouzita){
+    zprava += ` Je použitá v ${receptyPouzite.length} receptech, ${zaznamyPouzite.length} záznamech deníku${vZeleninePouzita ? ' a v rozpočtu Zeleniny' : ''} — odebere se odtud.`;
   }
   if(!confirm(zprava)) return;
   appState.suroviny = appState.suroviny.filter(x => x.id !== id);
   appState.recepty.forEach(r => { r.polozky = r.polozky.filter(p => p.surovinaId !== id); });
   appState.denik.forEach(z => { z.polozky = z.polozky.filter(p => p.surovinaId !== id); });
+  appState.zelenina.polozky = appState.zelenina.polozky.filter(p => p.surovinaId !== id);
   ulozitData();
   vykresliVse();
 }
@@ -1466,6 +1522,121 @@ function vykresliPrehled(){
 }
 
 // ===================================================================
+// 11b. ZELENINA — rozpočet mixu, automatický zápis do deníku
+// ===================================================================
+function pridatRadekZeleniny(surovinaId = '', gramy = ''){
+  if(appState.suroviny.length === 0){
+    alert('Nejdřív přidej alespoň jednu surovinu v sekci Suroviny.');
+    return;
+  }
+  const kontejner = document.getElementById('zelenina-radky');
+  const radek = document.createElement('div');
+  radek.className = 'radek-polozky';
+  radek.innerHTML = `
+    <select class="zelenina-surovina">${vytvorOptionsSurovin(surovinaId)}</select>
+    <input type="number" class="zelenina-gramy" min="0" step="any" placeholder="gramy" value="${gramy}">
+    <button type="button" class="tlacitko-odebrat">✕</button>
+  `;
+  radek.querySelector('.zelenina-surovina').addEventListener('change', zpracujZmenuZeleniny);
+  radek.querySelector('.zelenina-gramy').addEventListener('input', zpracujZmenuZeleniny);
+  radek.querySelector('.tlacitko-odebrat').addEventListener('click', () => { radek.remove(); zpracujZmenuZeleniny(); });
+  kontejner.appendChild(radek);
+}
+
+function pridatRadekZeleninyRucne(){
+  pridatRadekZeleniny();
+  zpracujZmenuZeleniny();
+}
+
+function vykresliMiskyZeleniny(){
+  const kontejner = document.getElementById('zelenina-misky-psu');
+  if(appState.psi.length === 0){
+    kontejner.innerHTML = '<p class="prazdny-stav">Nejdřív přidej psa v sekci Psi.</p>';
+    return;
+  }
+  kontejner.innerHTML = appState.psi.map(p => {
+    const hodnota = appState.zelenina.miskyPsu[p.id] || '';
+    return `<div class="radek-miska"><span>${escapovatHtml(p.jmeno)}</span><input type="number" class="zelenina-miska" data-pes="${p.id}" min="0" step="any" placeholder="gramy" value="${hodnota}"></div>`;
+  }).join('');
+  document.querySelectorAll('.zelenina-miska').forEach(input => {
+    input.addEventListener('input', zpracujZmenuZeleniny);
+  });
+}
+
+// Uloží aktuální stav formuláře Zeleniny do appState (volá se jen při skutečné změně, ne při vykreslování)
+function ulozitZeleninuDoStavu(){
+  const polozky = [];
+  document.querySelectorAll('#zelenina-radky .radek-polozky').forEach(r => {
+    polozky.push({
+      surovinaId: r.querySelector('.zelenina-surovina').value,
+      gramy: parseFloat(r.querySelector('.zelenina-gramy').value) || 0
+    });
+  });
+  const miskyPsu = {};
+  document.querySelectorAll('.zelenina-miska').forEach(input => {
+    const hodnota = parseFloat(input.value) || 0;
+    if(hodnota > 0) miskyPsu[input.dataset.pes] = hodnota;
+  });
+  appState.zelenina = { polozky, miskyPsu };
+  ulozitData();
+}
+
+function prepocitejZobrazeniZeleniny(){
+  let davka = 0;
+  document.querySelectorAll('#zelenina-radky .zelenina-gramy').forEach(i => davka += (parseFloat(i.value) || 0));
+  document.getElementById('zelenina-soucet-davky').textContent = `Celkem v dávce: ${zaokrouhli(davka,1)} g`;
+
+  let vyuzito = 0;
+  document.querySelectorAll('.zelenina-miska').forEach(i => vyuzito += (parseFloat(i.value) || 0));
+  const procento = davka > 0 ? (vyuzito / davka * 100) : 0;
+  const el = document.getElementById('zelenina-vyuziti');
+  el.textContent = `Využito: ${zaokrouhli(procento,1)} % dávky`;
+  el.style.color = procento > 100 ? 'var(--barva-chyba)' : 'var(--barva-textslaby)';
+}
+
+function zpracujZmenuZeleniny(){
+  ulozitZeleninuDoStavu();
+  prepocitejZobrazeniZeleniny();
+}
+
+// Vykreslení Zeleniny z uloženého appState (bez zápisu zpět, ať se rozepsané hodnoty samy nepřepíší)
+function vykresliZeleninu(){
+  document.getElementById('zelenina-radky').innerHTML = '';
+  appState.zelenina.polozky.forEach(p => pridatRadekZeleniny(p.surovinaId, p.gramy));
+  vykresliMiskyZeleniny();
+  if(!document.getElementById('zelenina-datum').value){
+    document.getElementById('zelenina-datum').value = dnesniDatumIso();
+  }
+  prepocitejZobrazeniZeleniny();
+}
+
+function zapsatZeleninuDoDeniku(){
+  ulozitZeleninuDoStavu();
+  const davka = appState.zelenina.polozky.reduce((s, p) => s + p.gramy, 0);
+  if(davka <= 0){ alert('Nejdřív zadej suroviny a jejich váhu v dávce.'); return; }
+
+  const psiSMiskou = appState.psi.filter(p => (appState.zelenina.miskyPsu[p.id] || 0) > 0);
+  if(psiSMiskou.length === 0){ alert('Zadej aspoň jednomu psovi váhu do misky.'); return; }
+
+  const datum = document.getElementById('zelenina-datum').value || dnesniDatumIso();
+  const castDne = document.getElementById('zelenina-cast-dne').value;
+
+  psiSMiskou.forEach(pes => {
+    const miska = appState.zelenina.miskyPsu[pes.id];
+    const podil = miska / davka;
+    const polozky = appState.zelenina.polozky
+      .filter(p => p.surovinaId && p.gramy > 0)
+      .map(p => ({ surovinaId: p.surovinaId, gramy: zaokrouhli(p.gramy * podil, 1) }));
+    appState.denik.push({ id: vytvorId(), datum, psId: pes.id, castDne, polozky });
+  });
+
+  ulozitData();
+  alert(`Zapsáno do deníku: ${psiSMiskou.length} ${psiSMiskou.length === 1 ? 'záznam' : (psiSMiskou.length < 5 ? 'záznamy' : 'záznamů')}.`);
+  vykresliSeznamZaznamu();
+  vykresliPrehled();
+}
+
+// ===================================================================
 // 12. ZÁLOHA — export / import
 // ===================================================================
 function vykresliInfoZaloha(){
@@ -1520,7 +1691,8 @@ function importZalohy(vstup){
       psi: data.psi || [],
       suroviny: data.suroviny || [],
       recepty: Array.isArray(data.recepty) ? data.recepty : [],
-      denik: Array.isArray(data.denik) ? data.denik : []
+      denik: Array.isArray(data.denik) ? data.denik : [],
+      zelenina: normalizovatZeleninu(data.zelenina)
     };
     ulozitData();
     vykresliVse();
@@ -1541,6 +1713,7 @@ function vykresliVse(){
   naplnSelectPsuRecepty();
   vykresliSeznamReceptu();
   inicializovatDenik();
+  vykresliZeleninu();
   vykresliInfoZaloha();
 }
 
