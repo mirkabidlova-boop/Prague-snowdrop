@@ -9,8 +9,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="icon" type="image/svg+xml" href="icon.svg">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" type="image/jpeg" href="icon-pes.jpg">
+<link rel="apple-touch-icon" href="icon-pes.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -237,6 +237,19 @@
   .cap-malo{ color:var(--barva-cap-malo); }
   .cap-moc{ color:var(--barva-chyba); }
   .cap-neznamo{ color:var(--barva-textslaby); }
+
+  /* ===== 12. DENÍK — pruh psů s fotkami (přepínání/swipe) ===== */
+  #denik-swipe-oblast{ touch-action: pan-y; }
+  .pruh-psu{ display:flex; gap:14px; overflow-x:auto; padding:4px 2px 16px; -webkit-overflow-scrolling:touch; }
+  .polozka-pruhu{
+    display:flex; flex-direction:column; align-items:center; gap:5px; background:none; border:none;
+    cursor:pointer; flex:0 0 auto; font-family:inherit; color:var(--barva-textslaby); font-size:0.78rem; width:64px;
+  }
+  .avatar-pruhu{ width:56px; height:56px; border-radius:50%; object-fit:cover; border:3px solid transparent; }
+  .avatar-pruhu.avatar-zastupny{ display:flex; align-items:center; justify-content:center; }
+  .polozka-pruhu.aktivni .avatar-pruhu{ border-color:var(--barva-akcent); }
+  .polozka-pruhu.aktivni{ color:var(--barva-text); font-weight:700; }
+  .polozka-pruhu span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:64px; }
 </style>
 </head>
 <body>
@@ -287,26 +300,30 @@
   <!-- ==== SEKCE: DENÍK ==== -->
   <section id="sekce-denik" class="sekce">
     <h2>Deník krmení</h2>
-    <label for="denik-vyber-psa">Pes</label>
-    <select id="denik-vyber-psa" onchange="zmenaPsaDenik()"></select>
 
-    <form id="formular-zaznamu" class="formular-karta">
-      <input type="hidden" id="zaznam-id">
-      <label for="zaznam-datum">Datum</label>
-      <input type="date" id="zaznam-datum" required>
+    <div id="denik-swipe-oblast">
+      <div id="denik-pruh-psu" class="pruh-psu"></div>
 
-      <label for="zaznam-cast-dne">Kdy</label>
-      <select id="zaznam-cast-dne">
-        <option value="rano">Ráno</option>
-        <option value="vecer">Večer</option>
-      </select>
+      <form id="formular-zaznamu" class="formular-karta">
+        <input type="hidden" id="zaznam-id">
+        <label for="zaznam-datum">Datum</label>
+        <input type="date" id="zaznam-datum" required>
 
-      <div id="denik-radky"></div>
-      <button type="button" class="tlacitko sekundarni" onclick="pridatRadekDeniku()">+ Přidat surovinu</button>
+        <label for="zaznam-cast-dne">Kdy</label>
+        <select id="zaznam-cast-dne">
+          <option value="rano">Ráno</option>
+          <option value="vecer">Večer</option>
+        </select>
 
-      <button type="submit" class="tlacitko" id="zaznam-tlacitko-odeslat">Uložit záznam</button>
-      <button type="button" class="tlacitko sekundarni" id="zaznam-tlacitko-zrusit" hidden onclick="zrusitEditaciZaznamu()">Zrušit úpravu</button>
-    </form>
+        <div id="denik-radky"></div>
+        <button type="button" class="tlacitko sekundarni" onclick="pridatRadekDeniku()">+ Přidat surovinu</button>
+
+        <button type="submit" class="tlacitko" id="zaznam-tlacitko-odeslat">Uložit záznam</button>
+        <button type="button" class="tlacitko sekundarni" id="zaznam-tlacitko-zrusit" hidden onclick="zrusitEditaciZaznamu()">Zrušit úpravu</button>
+      </form>
+    </div>
+
+    <p class="napoveda">Tip: mezi psy můžeš přejet prstem doleva/doprava přímo v této oblasti.</p>
 
     <h3>Zapsané záznamy</h3>
     <div id="seznam-zaznamu"></div>
@@ -485,6 +502,8 @@ let appState = { verze: 1, psi: [], suroviny: [], recepty: [], denik: [] };
 let rezimObdobi = 'den';       // 'den' | 'tyden' | 'mesic'
 let kotevniDatum = '';         // datum, od kterého se počítá zobrazené období
 let docasnaFotoPsa;            // undefined = beze změny, null = odebrat, string (dataURL) = nová fotka
+let vybranyPesDenik = null;    // id psa aktuálně zobrazeného v sekci Deník
+let rozpracovaneZaznamyDeniku = {}; // { [psId]: { editaceId, datum, castDne, polozky } } — nezapsané řádky podle psa
 
 // ===================================================================
 // 2. ULOŽIŠTĚ (localStorage)
@@ -654,9 +673,7 @@ function zobrazSekci(nazev){
     vykresliSeznamReceptu();
   }
   if(nazev === 'denik'){
-    naplnSelectPsuDenik();
-    vykresliSeznamZaznamu();
-    vykresliPrehled();
+    inicializovatDenik();
   }
   window.scrollTo(0, 0);
 }
@@ -820,6 +837,7 @@ function smazatPsa(id){
   appState.psi = appState.psi.filter(p => p.id !== id);
   appState.recepty = appState.recepty.filter(r => r.psId !== id);
   appState.denik = appState.denik.filter(z => z.psId !== id);
+  delete rozpracovaneZaznamyDeniku[id];
   ulozitData();
   vykresliVse();
 }
@@ -1085,21 +1103,111 @@ function vykresliSeznamReceptu(){
 // ===================================================================
 // 10. SEKCE DENÍK — zápis záznamů
 // ===================================================================
-function naplnSelectPsuDenik(){
-  const select = document.getElementById('denik-vyber-psa');
-  const predchozi = select.value;
+// Zajistí, že vybranyPesDenik ukazuje na existujícího psa (první v pořadí, pokud chybí/smazán)
+function zajistiVybranehoPsaDeniku(){
+  if(appState.psi.length === 0){ vybranyPesDenik = null; return; }
+  if(!vybranyPesDenik || !najdiPsa(vybranyPesDenik)) vybranyPesDenik = appState.psi[0].id;
+}
+
+// Pruh kulatých fotek psů nahoře v Deníku — klepnutím nebo swipem se mezi nimi přepíná
+function vykresliPruhPsuDenik(){
+  zajistiVybranehoPsaDeniku();
+  const kontejner = document.getElementById('denik-pruh-psu');
   if(appState.psi.length === 0){
-    select.innerHTML = '<option value="">— nejdřív přidej psa —</option>';
+    kontejner.innerHTML = '<p class="prazdny-stav">Nejdřív přidej psa v sekci Psi.</p>';
+    return;
+  }
+  kontejner.innerHTML = appState.psi.map(p => {
+    const aktivni = p.id === vybranyPesDenik ? 'aktivni' : '';
+    const avatar = p.foto
+      ? `<img src="${p.foto}" alt="${escapovatHtml(p.jmeno)}" class="avatar-pruhu">`
+      : `<div class="avatar-pruhu avatar-zastupny">${ikonaSnezenky(20)}</div>`;
+    return `<button type="button" class="polozka-pruhu ${aktivni}" onclick="vybratPsaDenik('${p.id}')">${avatar}<span>${escapovatHtml(p.jmeno)}</span></button>`;
+  }).join('');
+}
+
+// Uloží aktuálně rozepsaný (neuložený) formulář daného psa do paměti, ať se neztratí při přepnutí
+function zachytitRozepsanyFormular(psId){
+  if(!psId) return;
+  const polozky = [];
+  document.querySelectorAll('#denik-radky .radek-polozky').forEach(r => {
+    polozky.push({
+      surovinaId: r.querySelector('.denik-surovina').value,
+      gramy: r.querySelector('.denik-gramy').value
+    });
+  });
+  rozpracovaneZaznamyDeniku[psId] = {
+    editaceId: document.getElementById('zaznam-id').value,
+    datum: document.getElementById('zaznam-datum').value,
+    castDne: document.getElementById('zaznam-cast-dne').value,
+    polozky
+  };
+}
+
+// Obnoví rozepsaný formulář daného psa (pokud existuje), jinak zobrazí prázdný formulář
+function obnovitRozepsanyFormular(psId){
+  const rozpracovany = psId ? rozpracovaneZaznamyDeniku[psId] : null;
+  document.getElementById('denik-radky').innerHTML = '';
+  if(rozpracovany){
+    document.getElementById('zaznam-id').value = rozpracovany.editaceId || '';
+    document.getElementById('zaznam-datum').value = rozpracovany.datum || dnesniDatumIso();
+    document.getElementById('zaznam-cast-dne').value = rozpracovany.castDne || 'rano';
+    rozpracovany.polozky.forEach(p => pridatRadekDeniku(p.surovinaId, p.gramy));
+    document.getElementById('zaznam-tlacitko-odeslat').textContent = rozpracovany.editaceId ? 'Uložit změny' : 'Uložit záznam';
+    document.getElementById('zaznam-tlacitko-zrusit').hidden = !rozpracovany.editaceId;
   } else {
-    select.innerHTML = appState.psi.map(p => `<option value="${p.id}">${escapovatHtml(p.jmeno)}</option>`).join('');
-    if(appState.psi.some(p => p.id === predchozi)) select.value = predchozi;
+    document.getElementById('zaznam-id').value = '';
+    document.getElementById('zaznam-datum').value = dnesniDatumIso();
+    document.getElementById('zaznam-cast-dne').value = 'rano';
+    document.getElementById('zaznam-tlacitko-odeslat').textContent = 'Uložit záznam';
+    document.getElementById('zaznam-tlacitko-zrusit').hidden = true;
   }
 }
 
-function zmenaPsaDenik(){
-  zrusitEditaciZaznamu();
+// Přepnutí na jiného psa v Deníku (klepnutím na fotku nebo swipem) — rozepsané řádky se uloží zvlášť pro každého psa
+function vybratPsaDenik(noveId){
+  if(!najdiPsa(noveId)) return;
+  if(vybranyPesDenik && vybranyPesDenik !== noveId) zachytitRozepsanyFormular(vybranyPesDenik);
+  vybranyPesDenik = noveId;
+  vykresliPruhPsuDenik();
+  obnovitRozepsanyFormular(vybranyPesDenik);
   vykresliSeznamZaznamu();
   vykresliPrehled();
+}
+
+// Počáteční vykreslení Deníku (bez "zachytávání" předchozího stavu, protože žádný ještě není)
+function inicializovatDenik(){
+  zajistiVybranehoPsaDeniku();
+  vykresliPruhPsuDenik();
+  obnovitRozepsanyFormular(vybranyPesDenik);
+  vykresliSeznamZaznamu();
+  vykresliPrehled();
+}
+
+// Swipe gesto (přejetí prstem doleva/doprava) pro přepnutí psa v Deníku
+function posunPsaDenik(smer){
+  if(appState.psi.length < 2) return;
+  const index = appState.psi.findIndex(p => p.id === vybranyPesDenik);
+  const novyIndex = (index + smer + appState.psi.length) % appState.psi.length;
+  vybratPsaDenik(appState.psi[novyIndex].id);
+}
+
+function pripojitSwipeDenik(){
+  const oblast = document.getElementById('denik-swipe-oblast');
+  let startX = null, startY = null;
+  oblast.addEventListener('touchstart', (e) => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  oblast.addEventListener('touchend', (e) => {
+    if(startX === null) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    startX = null; startY = null;
+    if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      posunPsaDenik(dx < 0 ? 1 : -1);
+    }
+  }, { passive: true });
 }
 
 function pridatRadekDeniku(surovinaId = '', gramy = ''){
@@ -1120,7 +1228,7 @@ function pridatRadekDeniku(surovinaId = '', gramy = ''){
 
 function odeslatFormularZaznamu(e){
   e.preventDefault();
-  const psId = document.getElementById('denik-vyber-psa').value;
+  const psId = vybranyPesDenik;
   if(!psId){ alert('Nejdřív přidej psa v sekci Psi.'); return; }
   const datum = document.getElementById('zaznam-datum').value;
   if(!datum){ alert('Vyber datum.'); return; }
@@ -1150,7 +1258,7 @@ function odeslatFormularZaznamu(e){
 function upravitZaznamDeniku(id){
   const zaznam = appState.denik.find(z => z.id === id);
   if(!zaznam) return;
-  document.getElementById('denik-vyber-psa').value = zaznam.psId;
+  vybratPsaDenik(zaznam.psId);
   document.getElementById('zaznam-id').value = zaznam.id;
   document.getElementById('zaznam-datum').value = zaznam.datum;
   document.getElementById('zaznam-cast-dne').value = zaznam.castDne || 'rano';
@@ -1163,6 +1271,7 @@ function upravitZaznamDeniku(id){
 }
 
 function zrusitEditaciZaznamu(){
+  if(vybranyPesDenik) delete rozpracovaneZaznamyDeniku[vybranyPesDenik];
   document.getElementById('formular-zaznamu').reset();
   document.getElementById('zaznam-id').value = '';
   document.getElementById('denik-radky').innerHTML = '';
@@ -1181,7 +1290,7 @@ function smazatZaznamDeniku(id){
 }
 
 function vykresliSeznamZaznamu(){
-  const psId = document.getElementById('denik-vyber-psa').value;
+  const psId = vybranyPesDenik;
   const kontejner = document.getElementById('seznam-zaznamu');
   const popisyCastiDne = { rano: 'Ráno', vecer: 'Večer' };
   const zaznamy = appState.denik.filter(z => z.psId === psId).sort((a, b) => {
@@ -1265,7 +1374,7 @@ function vyhodnotCaPZaRozsah(psId, rozsah){
 }
 
 function vykresliCaPSouhrn(){
-  const psId = document.getElementById('denik-vyber-psa').value;
+  const psId = vybranyPesDenik;
   const kontejner = document.getElementById('denik-cap-souhrn');
   const pes = najdiPsa(psId);
   if(!pes){ kontejner.innerHTML = ''; return; }
@@ -1292,7 +1401,7 @@ function vykresliCaPSouhrn(){
 }
 
 function vykresliPrehled(){
-  const psId = document.getElementById('denik-vyber-psa').value;
+  const psId = vybranyPesDenik;
   const pes = najdiPsa(psId);
   const kontejner = document.getElementById('denik-prehled');
   const rozsah = ziskejRozsahObdobi();
@@ -1431,21 +1540,19 @@ function vykresliVse(){
   vykresliSeznamSurovin();
   naplnSelectPsuRecepty();
   vykresliSeznamReceptu();
-  naplnSelectPsuDenik();
-  vykresliSeznamZaznamu();
-  vykresliPrehled();
+  inicializovatDenik();
   vykresliInfoZaloha();
 }
 
 window.addEventListener('DOMContentLoaded', () => {
   appState = nacistData();
   kotevniDatum = dnesniDatumIso();
-  document.getElementById('zaznam-datum').value = dnesniDatumIso();
 
   document.getElementById('formular-psa').addEventListener('submit', odeslatFormularPsa);
   document.getElementById('formular-suroviny').addEventListener('submit', odeslatFormularSuroviny);
   document.getElementById('formular-receptu').addEventListener('submit', odeslatFormularReceptu);
   document.getElementById('formular-zaznamu').addEventListener('submit', odeslatFormularZaznamu);
+  pripojitSwipeDenik();
 
   vykresliVse();
   soucetProcentFormulareReceptu();
