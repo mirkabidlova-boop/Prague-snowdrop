@@ -330,9 +330,6 @@
 
     <p class="napoveda">Tip: mezi psy můžeš přejet prstem doleva/doprava přímo v této oblasti.</p>
 
-    <h3>Zapsané záznamy</h3>
-    <div id="seznam-zaznamu"></div>
-
     <h3>Přehled výživy</h3>
     <div id="denik-cap-souhrn" class="cap-radek"></div>
     <div class="prepinac-obdobi">
@@ -345,6 +342,10 @@
       <span id="denik-obdobi-popisek"></span>
       <button type="button" onclick="posunObdobi(1)" aria-label="Další období">▶</button>
     </div>
+
+    <h3>Zapsané záznamy (za zvolené období)</h3>
+    <div id="seznam-zaznamu"></div>
+
     <div id="denik-prehled"></div>
   </section>
 
@@ -1349,13 +1350,14 @@ function vykresliSeznamZaznamu(){
   const psId = vybranyPesDenik;
   const kontejner = document.getElementById('seznam-zaznamu');
   const popisyCastiDne = { rano: 'Ráno', vecer: 'Večer' };
-  const zaznamy = appState.denik.filter(z => z.psId === psId).sort((a, b) => {
+  const rozsah = ziskejRozsahObdobi();
+  const zaznamy = appState.denik.filter(z => z.psId === psId && z.datum >= rozsah.od && z.datum <= rozsah.do).sort((a, b) => {
     if(a.datum !== b.datum) return b.datum.localeCompare(a.datum);
     if(a.castDne === b.castDne) return 0;
     return a.castDne === 'rano' ? -1 : 1;
   });
   if(zaznamy.length === 0){
-    kontejner.innerHTML = '<p class="prazdny-stav">Zatím žádné záznamy.</p>';
+    kontejner.innerHTML = '<p class="prazdny-stav">Za toto období zatím žádné záznamy. Zkus přepnout Den/Týden/Měsíc nebo procházet šipkami.</p>';
     return;
   }
   kontejner.innerHTML = zaznamy.map(z => {
@@ -1384,6 +1386,7 @@ function vykresliSeznamZaznamu(){
 function prepniRezimObdobi(rezim){
   rezimObdobi = rezim;
   document.querySelectorAll('.prepinac-obdobi button').forEach(b => b.classList.toggle('aktivni', b.dataset.rezim === rezim));
+  vykresliSeznamZaznamu();
   vykresliPrehled();
 }
 
@@ -1397,6 +1400,7 @@ function posunObdobi(smer){
     const novy = new Date(d.getFullYear(), d.getMonth() + smer, 1);
     kotevniDatum = isoZDatumu(novy);
   }
+  vykresliSeznamZaznamu();
   vykresliPrehled();
 }
 
