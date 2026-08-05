@@ -37,7 +37,7 @@
   [hidden]{ display:none !important; }
   body{
     margin:0;
-    padding-bottom:92px;
+    padding-left:80px;
     background:var(--barva-pozadi);
     color:var(--barva-text);
     font-family:'Inter','Segoe UI',Arial,sans-serif;
@@ -66,18 +66,20 @@
   .prazdny-stav svg{ color:var(--barva-hranice); margin-bottom:10px; }
   .prazdny-stav p{ margin:0; font-size:.92rem; line-height:1.5; }
 
-  /* ===== 3. NAVIGACE (taby dole) ===== */
+  /* ===== 3. NAVIGACE (taby vlevo) ===== */
   nav.taby{
-    position:fixed; left:0; right:0; bottom:0;
-    display:flex;
+    position:fixed; left:0; top:0; bottom:0; width:80px;
+    display:flex; flex-direction:column;
     background:var(--barva-primarni);
-    box-shadow:0 -2px 10px rgba(0,0,0,.14);
+    box-shadow:2px 0 10px rgba(0,0,0,.14);
     z-index:100;
+    overflow-y:auto;
   }
   .tab-tlacitko{
-    flex:1; padding:10px 4px 8px; font-size:0.78rem;
+    flex:1; padding:6px 4px; font-size:0.72rem; line-height:1.2;
     background:none; border:none; color:rgba(255,255,255,.72);
     text-align:center; cursor:pointer; font-family:inherit;
+    display:flex; align-items:center; justify-content:center;
   }
   .tab-tlacitko.aktivni{ color:#fff; font-weight:800; }
 
@@ -181,6 +183,7 @@
   @keyframes vyjet-panel{ from{ transform:translateY(24px); opacity:.5; } to{ transform:translateY(0); opacity:1; } }
   @media (prefers-reduced-motion: reduce){ .panel{ animation:none; } }
   @media (min-width:600px){
+    html{ font-size:18px; }
     .prekryv{ align-items:center; padding:20px; }
     .panel{ border-radius:16px; max-height:85vh; }
   }
@@ -363,7 +366,6 @@
 
       <h3>Váha do misky (g)</h3>
       <div id="zelenina-misky-psu"></div>
-      <p id="zelenina-vyuziti" class="text-slaby">Využito: 0 % dávky</p>
 
       <h3>Kdy zapsat</h3>
       <div class="mrizka-2">
@@ -715,6 +717,10 @@ function prepocitejGramazeReceptu(recept, pes){
 // 6. NAVIGACE MEZI SEKCEMI
 // ===================================================================
 function zobrazSekci(nazev){
+  const byvalaAktivni = document.querySelector('.sekce.aktivni');
+  if(byvalaAktivni && byvalaAktivni.id === 'sekce-denik' && nazev !== 'denik'){
+    zachytitRozepsanyFormular(vybranyPesDenik);
+  }
   document.querySelectorAll('.sekce').forEach(s => s.classList.remove('aktivni'));
   document.getElementById('sekce-' + nazev).classList.add('aktivni');
   document.querySelectorAll('.tab-tlacitko').forEach(b => b.classList.toggle('aktivni', b.dataset.sekce === nazev));
@@ -1589,13 +1595,6 @@ function prepocitejZobrazeniZeleniny(){
   let davka = 0;
   document.querySelectorAll('#zelenina-radky .zelenina-gramy').forEach(i => davka += (parseFloat(i.value) || 0));
   document.getElementById('zelenina-soucet-davky').textContent = `Celkem v dávce: ${zaokrouhli(davka,1)} g`;
-
-  let vyuzito = 0;
-  document.querySelectorAll('.zelenina-miska').forEach(i => vyuzito += (parseFloat(i.value) || 0));
-  const procento = davka > 0 ? (vyuzito / davka * 100) : 0;
-  const el = document.getElementById('zelenina-vyuziti');
-  el.textContent = `Využito: ${zaokrouhli(procento,1)} % dávky`;
-  el.style.color = procento > 100 ? 'var(--barva-chyba)' : 'var(--barva-textslaby)';
 }
 
 function zpracujZmenuZeleniny(){
@@ -1634,8 +1633,10 @@ function zapsatZeleninuDoDeniku(){
     appState.denik.push({ id: vytvorId(), datum, psId: pes.id, castDne, polozky });
   });
 
+  appState.zelenina.miskyPsu = {};
   ulozitData();
   alert(`Zapsáno do deníku: ${psiSMiskou.length} ${psiSMiskou.length === 1 ? 'záznam' : (psiSMiskou.length < 5 ? 'záznamy' : 'záznamů')}.`);
+  vykresliMiskyZeleniny();
   vykresliSeznamZaznamu();
   vykresliPrehled();
 }
