@@ -1369,7 +1369,7 @@ function vykresliSeznamZaznamu(){
   kontejner.innerHTML = zaznamy.map(z => {
     const popisPolozek = z.polozky.map(p => {
       const s = najdiSurovinu(p.surovinaId);
-      return `${s ? escapovatHtml(s.nazev) : '(smazaná surovina)'} ${zaokrouhli(p.gramy,1)} g`;
+      return `${s ? escapovatHtml(s.nazev) : '(smazaná surovina)'} ${zaokrouhli(p.gramy,2)} g`;
     }).join(', ');
     const castDne = popisyCastiDne[z.castDne] || 'Ráno';
     return `
