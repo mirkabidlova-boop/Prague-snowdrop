@@ -547,7 +547,7 @@ let rezimObdobi = 'den';       // 'den' | 'tyden' | 'mesic'
 let kotevniDatum = '';         // datum, od kterého se počítá zobrazené období
 let docasnaFotoPsa;            // undefined = beze změny, null = odebrat, string (dataURL) = nová fotka
 let vybranyPesDenik = null;    // id psa aktuálně zobrazeného v sekci Deník
-let rozpracovaneZaznamyDeniku = {}; // { [psId]: { editaceId, datum, castDne, polozky } } — nezapsané řádky podle psa
+let rozpracovaneZaznamyDeniku = {}; // { [psId]: { editaceId, polozky } } — nezapsané řádky podle psa (datum a "Kdy" jsou společné pro všechny psy)
 
 // ===================================================================
 // 2. ULOŽIŠTĚ (localStorage)
@@ -1201,27 +1201,26 @@ function zachytitRozepsanyFormular(psId){
   });
   rozpracovaneZaznamyDeniku[psId] = {
     editaceId: document.getElementById('zaznam-id').value,
-    datum: document.getElementById('zaznam-datum').value,
-    castDne: document.getElementById('zaznam-cast-dne').value,
     polozky
   };
 }
 
 // Obnoví rozepsaný formulář daného psa (pokud existuje), jinak zobrazí prázdný formulář
+// Datum a "Kdy" jsou společné pro všechny psy (nepřepisují se při přepnutí psa),
+// ať se nemusí zadávat znovu u každého psa
 function obnovitRozepsanyFormular(psId){
   const rozpracovany = psId ? rozpracovaneZaznamyDeniku[psId] : null;
   document.getElementById('denik-radky').innerHTML = '';
+  if(!document.getElementById('zaznam-datum').value){
+    document.getElementById('zaznam-datum').value = dnesniDatumIso();
+  }
   if(rozpracovany){
     document.getElementById('zaznam-id').value = rozpracovany.editaceId || '';
-    document.getElementById('zaznam-datum').value = rozpracovany.datum || dnesniDatumIso();
-    document.getElementById('zaznam-cast-dne').value = rozpracovany.castDne || 'rano';
     rozpracovany.polozky.forEach(p => pridatRadekDeniku(p.surovinaId, p.gramy));
     document.getElementById('zaznam-tlacitko-odeslat').textContent = rozpracovany.editaceId ? 'Uložit změny' : 'Uložit záznam';
     document.getElementById('zaznam-tlacitko-zrusit').hidden = !rozpracovany.editaceId;
   } else {
     document.getElementById('zaznam-id').value = '';
-    document.getElementById('zaznam-datum').value = dnesniDatumIso();
-    document.getElementById('zaznam-cast-dne').value = 'rano';
     document.getElementById('zaznam-tlacitko-odeslat').textContent = 'Uložit záznam';
     document.getElementById('zaznam-tlacitko-zrusit').hidden = true;
   }
@@ -1335,11 +1334,13 @@ function upravitZaznamDeniku(id){
 
 function zrusitEditaciZaznamu(){
   if(vybranyPesDenik) delete rozpracovaneZaznamyDeniku[vybranyPesDenik];
+  const zachovaneDatum = document.getElementById('zaznam-datum').value || dnesniDatumIso();
+  const zachovanaCastDne = document.getElementById('zaznam-cast-dne').value || 'rano';
   document.getElementById('formular-zaznamu').reset();
   document.getElementById('zaznam-id').value = '';
   document.getElementById('denik-radky').innerHTML = '';
-  document.getElementById('zaznam-datum').value = dnesniDatumIso();
-  document.getElementById('zaznam-cast-dne').value = 'rano';
+  document.getElementById('zaznam-datum').value = zachovaneDatum;
+  document.getElementById('zaznam-cast-dne').value = zachovanaCastDne;
   document.getElementById('zaznam-tlacitko-odeslat').textContent = 'Uložit záznam';
   document.getElementById('zaznam-tlacitko-zrusit').hidden = true;
 }
