@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prague Snowdrop</title>
-<!-- build: 2026-08-16a -->
+<!-- build: 2026-08-16b -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#D9695B">
 <meta name="mobile-web-app-capable" content="yes">
@@ -77,7 +77,7 @@
     overflow-y:auto;
   }
   .tab-tlacitko{
-    flex:1; padding:6px 4px; font-size:0.92rem; line-height:1.2;
+    flex:1; padding:6px 4px; font-size:0.72rem; line-height:1.2;
     background:none; border:none; color:rgba(255,255,255,.72);
     text-align:center; cursor:pointer; font-family:inherit;
     display:flex; align-items:center; justify-content:center;
@@ -187,6 +187,11 @@
     html{ font-size:18px; }
     .prekryv{ align-items:center; padding:20px; }
     .panel{ border-radius:16px; max-height:85vh; }
+    .tab-tlacitko{ font-size:0.92rem; }
+    .pruh-psu{ gap:26px; }
+    .polozka-pruhu{ width:76px; }
+    .avatar-pruhu{ width:72px; height:72px; }
+    .polozka-pruhu span{ max-width:76px; }
   }
   .panel-hlavicka{ display:flex; justify-content:space-between; align-items:center; }
   .panel-hlavicka h3{ margin:0; font-size:1.1rem; color:var(--barva-text); }
@@ -249,16 +254,16 @@
 
   /* ===== 12. DENÍK — pruh psů s fotkami (přepínání/swipe) ===== */
   #denik-swipe-oblast{ touch-action: pan-y; }
-  .pruh-psu{ display:flex; gap:26px; overflow-x:auto; padding:4px 2px 16px; -webkit-overflow-scrolling:touch; }
+  .pruh-psu{ display:flex; gap:14px; overflow-x:auto; padding:4px 2px 16px; -webkit-overflow-scrolling:touch; }
   .polozka-pruhu{
     display:flex; flex-direction:column; align-items:center; gap:5px; background:none; border:none;
-    cursor:pointer; flex:0 0 auto; font-family:inherit; color:var(--barva-textslaby); font-size:0.78rem; width:76px;
+    cursor:pointer; flex:0 0 auto; font-family:inherit; color:var(--barva-textslaby); font-size:0.78rem; width:64px;
   }
-  .avatar-pruhu{ width:72px; height:72px; border-radius:50%; object-fit:cover; border:3px solid transparent; }
+  .avatar-pruhu{ width:56px; height:56px; border-radius:50%; object-fit:cover; border:3px solid transparent; }
   .avatar-pruhu.avatar-zastupny{ display:flex; align-items:center; justify-content:center; }
   .polozka-pruhu.aktivni .avatar-pruhu{ border-color:var(--barva-akcent); }
   .polozka-pruhu.aktivni{ color:var(--barva-text); font-weight:700; }
-  .polozka-pruhu span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:76px; }
+  .polozka-pruhu span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:64px; }
 </style>
 </head>
 <body>
