@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prague Snowdrop</title>
-<!-- build: 2026-08-16b -->
+<!-- build: 2026-08-16c -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#D9695B">
 <meta name="mobile-web-app-capable" content="yes">
@@ -38,7 +38,7 @@
   [hidden]{ display:none !important; }
   body{
     margin:0;
-    padding-left:80px;
+    padding-bottom:58px;
     background:var(--barva-pozadi);
     color:var(--barva-text);
     font-family:'Inter','Segoe UI',Arial,sans-serif;
@@ -67,17 +67,17 @@
   .prazdny-stav svg{ color:var(--barva-hranice); margin-bottom:10px; }
   .prazdny-stav p{ margin:0; font-size:.92rem; line-height:1.5; }
 
-  /* ===== 3. NAVIGACE (taby vlevo) ===== */
+  /* ===== 3. NAVIGACE (na mobilu dole vodorovně, od tabletu nahoru vlevo svisle) ===== */
   nav.taby{
-    position:fixed; left:0; top:0; bottom:0; width:80px;
-    display:flex; flex-direction:column;
+    position:fixed; left:0; right:0; bottom:0; top:auto; width:auto; height:58px;
+    display:flex; flex-direction:row;
     background:var(--barva-primarni);
-    box-shadow:2px 0 10px rgba(0,0,0,.14);
+    box-shadow:0 -2px 10px rgba(0,0,0,.14);
     z-index:100;
-    overflow-y:auto;
+    overflow-x:auto; overflow-y:hidden;
   }
   .tab-tlacitko{
-    flex:1; padding:6px 4px; font-size:0.72rem; line-height:1.2;
+    flex:1; padding:6px 4px; font-size:0.68rem; line-height:1.15;
     background:none; border:none; color:rgba(255,255,255,.72);
     text-align:center; cursor:pointer; font-family:inherit;
     display:flex; align-items:center; justify-content:center;
@@ -192,6 +192,13 @@
     .polozka-pruhu{ width:76px; }
     .avatar-pruhu{ width:72px; height:72px; }
     .polozka-pruhu span{ max-width:76px; }
+    body{ padding-bottom:0; padding-left:80px; }
+    nav.taby{
+      left:0; right:auto; top:0; bottom:0; width:80px; height:auto;
+      flex-direction:column;
+      box-shadow:2px 0 10px rgba(0,0,0,.14);
+      overflow-x:visible; overflow-y:auto;
+    }
   }
   .panel-hlavicka{ display:flex; justify-content:space-between; align-items:center; }
   .panel-hlavicka h3{ margin:0; font-size:1.1rem; color:var(--barva-text); }
