@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prague Snowdrop</title>
-<!-- build: 2026-08-06b -->
+<!-- build: 2026-08-16a -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#D9695B">
 <meta name="mobile-web-app-capable" content="yes">
@@ -77,7 +77,7 @@
     overflow-y:auto;
   }
   .tab-tlacitko{
-    flex:1; padding:6px 4px; font-size:0.72rem; line-height:1.2;
+    flex:1; padding:6px 4px; font-size:0.92rem; line-height:1.2;
     background:none; border:none; color:rgba(255,255,255,.72);
     text-align:center; cursor:pointer; font-family:inherit;
     display:flex; align-items:center; justify-content:center;
@@ -249,16 +249,16 @@
 
   /* ===== 12. DENÍK — pruh psů s fotkami (přepínání/swipe) ===== */
   #denik-swipe-oblast{ touch-action: pan-y; }
-  .pruh-psu{ display:flex; gap:14px; overflow-x:auto; padding:4px 2px 16px; -webkit-overflow-scrolling:touch; }
+  .pruh-psu{ display:flex; gap:26px; overflow-x:auto; padding:4px 2px 16px; -webkit-overflow-scrolling:touch; }
   .polozka-pruhu{
     display:flex; flex-direction:column; align-items:center; gap:5px; background:none; border:none;
-    cursor:pointer; flex:0 0 auto; font-family:inherit; color:var(--barva-textslaby); font-size:0.78rem; width:64px;
+    cursor:pointer; flex:0 0 auto; font-family:inherit; color:var(--barva-textslaby); font-size:0.78rem; width:76px;
   }
-  .avatar-pruhu{ width:56px; height:56px; border-radius:50%; object-fit:cover; border:3px solid transparent; }
+  .avatar-pruhu{ width:72px; height:72px; border-radius:50%; object-fit:cover; border:3px solid transparent; }
   .avatar-pruhu.avatar-zastupny{ display:flex; align-items:center; justify-content:center; }
   .polozka-pruhu.aktivni .avatar-pruhu{ border-color:var(--barva-akcent); }
   .polozka-pruhu.aktivni{ color:var(--barva-text); font-weight:700; }
-  .polozka-pruhu span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:64px; }
+  .polozka-pruhu span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:76px; }
 </style>
 </head>
 <body>
@@ -1433,8 +1433,8 @@ function ziskejRozsahObdobi(){
   return ziskejRozsahProRezim(rezimObdobi, kotevniDatum);
 }
 
-// Souhrn poměru Ca:P za dnešek, aktuální týden a aktuální měsíc — nezávisle na
-// přepínači Den/Týden/Měsíc a na tom, jak si uživatel prochází historii šipkami.
+// Souhrn poměru Ca:P za den/týden/měsíc kolem právě prohlíženého data —
+// sleduje navigaci šipkami, aby odpovídal tomu, co si uživatel právě prohlíží.
 function vyhodnotCaPZaRozsah(psId, rozsah){
   const zaznamy = appState.denik.filter(z => z.psId === psId && z.datum >= rozsah.od && z.datum <= rozsah.do);
   const snedeno = spocitejZivinyZaznamu(zaznamy);
@@ -1447,11 +1447,10 @@ function vykresliCaPSouhrn(){
   const pes = najdiPsa(psId);
   if(!pes){ kontejner.innerHTML = ''; return; }
 
-  const dnes = dnesniDatumIso();
   const obdobi = [
-    { nazev: 'Den', rozsah: ziskejRozsahProRezim('den', dnes) },
-    { nazev: 'Týden', rozsah: ziskejRozsahProRezim('tyden', dnes) },
-    { nazev: 'Měsíc', rozsah: ziskejRozsahProRezim('mesic', dnes) }
+    { nazev: 'Den', rozsah: ziskejRozsahProRezim('den', kotevniDatum) },
+    { nazev: 'Týden', rozsah: ziskejRozsahProRezim('tyden', kotevniDatum) },
+    { nazev: 'Měsíc', rozsah: ziskejRozsahProRezim('mesic', kotevniDatum) }
   ];
 
   kontejner.innerHTML = obdobi.map(o => {
