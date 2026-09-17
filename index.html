@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prague Snowdrop</title>
-<!-- build: 2026-08-16c -->
+<!-- build: 2026-08-17a -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#D9695B">
 <meta name="mobile-web-app-capable" content="yes">
@@ -312,9 +312,7 @@
         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
       </button>
     </div>
-    <label for="recept-vyber-psa">Pes</label>
-    <select id="recept-vyber-psa" onchange="zmenaPsaRecepty()"></select>
-
+    <p class="napoveda">Ulož si oblíbené kombinace surovin, které používáš pravidelně. V Deníku pak recept jedním klepnutím vložíš do záznamu a jen doplníš množství.</p>
     <div id="seznam-receptu"></div>
   </section>
 
@@ -335,6 +333,9 @@
           <option value="rano">Ráno</option>
           <option value="vecer">Večer</option>
         </select>
+
+        <label for="denik-vyber-receptu">Vybrat recept</label>
+        <select id="denik-vyber-receptu" onchange="pouzitRecept(this.value); this.value='';"></select>
 
         <div id="denik-radky"></div>
         <button type="button" class="tlacitko sekundarni" onclick="pridatRadekDeniku()">+ Přidat surovinu</button>
@@ -536,9 +537,8 @@
 
       <div id="recept-radky"></div>
       <button type="button" class="tlacitko sekundarni" onclick="pridatRadekReceptu()">+ Přidat surovinu</button>
-      <p id="recept-soucet">Součet procent: 0 %</p>
 
-      <button type="submit" class="tlacitko" id="recept-tlacitko-odeslat" disabled>Uložit recept</button>
+      <button type="submit" class="tlacitko" id="recept-tlacitko-odeslat">Uložit recept</button>
     </form>
   </div>
 </div>
@@ -577,6 +577,17 @@ function normalizovatZeleninu(zelenina){
   };
 }
 
+// Recepty už nejsou vázané na konkrétního psa a nemají procenta — jen seznam surovin.
+// Starší uložené recepty (s psId/procento z dřívější verze appky) se při načtení převedou na nový tvar.
+function normalizovatRecepty(recepty){
+  if(!Array.isArray(recepty)) return [];
+  return recepty.map(r => ({
+    id: r.id,
+    nazev: r.nazev,
+    polozky: Array.isArray(r.polozky) ? r.polozky.map(p => ({ surovinaId: p.surovinaId })) : []
+  }));
+}
+
 function nacistData(){
   try{
     const raw = localStorage.getItem(KLIC_ULOZISTE);
@@ -587,7 +598,7 @@ function nacistData(){
       verze: 1,
       psi: Array.isArray(data.psi) ? data.psi : [],
       suroviny: Array.isArray(data.suroviny) ? data.suroviny : [],
-      recepty: Array.isArray(data.recepty) ? data.recepty : [],
+      recepty: normalizovatRecepty(data.recepty),
       denik: Array.isArray(data.denik) ? data.denik : [],
       zelenina: normalizovatZeleninu(data.zelenina)
     };
@@ -715,18 +726,6 @@ function vyhodnotCaP(ca, p){
 }
 
 // ===================================================================
-// 5. RECEPTY — výpočet gramáže
-// ===================================================================
-function prepocitejGramazeReceptu(recept, pes){
-  return recept.polozky.map(polozka => {
-    const surovina = najdiSurovinu(polozka.surovinaId);
-    if(!surovina) return { nazev: '(smazaná surovina)', procento: polozka.procento, gramy: 0 };
-    const gramy = surovina.kcal > 0 ? (polozka.procento * pes.cil.kcal) / surovina.kcal : 0;
-    return { nazev: surovina.nazev, procento: polozka.procento, gramy };
-  });
-}
-
-// ===================================================================
 // 6. NAVIGACE MEZI SEKCEMI
 // ===================================================================
 function zobrazSekci(nazev){
@@ -739,7 +738,6 @@ function zobrazSekci(nazev){
   document.querySelectorAll('.tab-tlacitko').forEach(b => b.classList.toggle('aktivni', b.dataset.sekce === nazev));
 
   if(nazev === 'recepty'){
-    naplnSelectPsuRecepty();
     vykresliSeznamReceptu();
   }
   if(nazev === 'denik'){
@@ -900,15 +898,13 @@ function zrusitEditaciPsa(){
 function smazatPsa(id){
   const pes = najdiPsa(id);
   if(!pes) return;
-  const pocetReceptu = appState.recepty.filter(r => r.psId === id).length;
   const pocetZaznamu = appState.denik.filter(z => z.psId === id).length;
   let zprava = `Opravdu smazat psa "${pes.jmeno}"?`;
-  if(pocetReceptu > 0 || pocetZaznamu > 0){
-    zprava += ` Smažou se i jeho recepty (${pocetReceptu}) a záznamy v deníku (${pocetZaznamu}).`;
+  if(pocetZaznamu > 0){
+    zprava += ` Smažou se i jeho záznamy v deníku (${pocetZaznamu}).`;
   }
   if(!confirm(zprava)) return;
   appState.psi = appState.psi.filter(p => p.id !== id);
-  appState.recepty = appState.recepty.filter(r => r.psId !== id);
   appState.denik = appState.denik.filter(z => z.psId !== id);
   delete appState.zelenina.miskyPsu[id];
   delete rozpracovaneZaznamyDeniku[id];
@@ -1023,31 +1019,14 @@ function vytvorOptionsSurovin(vybranaId){
   return appState.suroviny.map(s => `<option value="${s.id}" ${s.id === vybranaId ? 'selected' : ''}>${escapovatHtml(s.nazev)}</option>`).join('');
 }
 
-function naplnSelectPsuRecepty(){
-  const select = document.getElementById('recept-vyber-psa');
-  const predchozi = select.value;
-  if(appState.psi.length === 0){
-    select.innerHTML = '<option value="">— nejdřív přidej psa —</option>';
-  } else {
-    select.innerHTML = appState.psi.map(p => `<option value="${p.id}">${escapovatHtml(p.jmeno)}</option>`).join('');
-    if(appState.psi.some(p => p.id === predchozi)) select.value = predchozi;
-  }
-}
-
-function zmenaPsaRecepty(){
-  vykresliSeznamReceptu();
-}
-
 function otevriPanelPridatRecept(){
-  const psId = document.getElementById('recept-vyber-psa').value;
-  if(!psId){ alert('Nejdřív přidej psa v sekci Psi.'); return; }
   if(appState.suroviny.length === 0){ alert('Nejdřív přidej alespoň jednu surovinu v sekci Suroviny.'); return; }
   zrusitEditaciReceptu();
   document.getElementById('panel-recept-nadpis').textContent = 'Přidat recept';
   otevriPanel('recept');
 }
 
-function pridatRadekReceptu(surovinaId = '', procento = ''){
+function pridatRadekReceptu(surovinaId = ''){
   if(appState.suroviny.length === 0){
     alert('Nejdřív přidej alespoň jednu surovinu v sekci Suroviny.');
     return;
@@ -1057,53 +1036,29 @@ function pridatRadekReceptu(surovinaId = '', procento = ''){
   radek.className = 'radek-polozky';
   radek.innerHTML = `
     <select class="recept-surovina">${vytvorOptionsSurovin(surovinaId)}</select>
-    <input type="number" class="recept-procento" min="0" max="100" step="any" placeholder="%" value="${procento}">
-    <button type="button" class="tlacitko-odebrat" onclick="this.parentElement.remove(); soucetProcentFormulareReceptu();">✕</button>
+    <button type="button" class="tlacitko-odebrat" onclick="this.parentElement.remove();">✕</button>
   `;
   kontejner.appendChild(radek);
-  radek.querySelector('.recept-procento').addEventListener('input', soucetProcentFormulareReceptu);
-  soucetProcentFormulareReceptu();
-}
-
-function soucetProcentFormulareReceptu(){
-  const inputy = document.querySelectorAll('#recept-radky .recept-procento');
-  let soucet = 0;
-  inputy.forEach(i => soucet += (parseFloat(i.value) || 0));
-  const el = document.getElementById('recept-soucet');
-  el.textContent = `Součet procent: ${zaokrouhli(soucet,1)} %`;
-  const tlacitko = document.getElementById('recept-tlacitko-odeslat');
-  if(inputy.length > 0 && Math.abs(soucet - 100) < 0.5){
-    el.style.color = 'var(--barva-ok)';
-    tlacitko.disabled = false;
-  } else {
-    el.style.color = 'var(--barva-varovani)';
-    tlacitko.disabled = true;
-  }
 }
 
 function odeslatFormularReceptu(e){
   e.preventDefault();
-  const psId = document.getElementById('recept-vyber-psa').value;
-  if(!psId){ alert('Nejdřív přidej psa v sekci Psi.'); return; }
   const nazev = document.getElementById('recept-nazev').value.trim();
   if(!nazev){ alert('Zadej název receptu.'); return; }
   const radky = document.querySelectorAll('#recept-radky .radek-polozky');
   const polozky = [];
   radky.forEach(r => {
     const surovinaId = r.querySelector('.recept-surovina').value;
-    const procento = parseFloat(r.querySelector('.recept-procento').value) || 0;
-    if(surovinaId && procento > 0) polozky.push({ surovinaId, procento });
+    if(surovinaId) polozky.push({ surovinaId });
   });
   if(polozky.length === 0){ alert('Přidej aspoň jednu surovinu do receptu.'); return; }
-  const soucet = polozky.reduce((s, p) => s + p.procento, 0);
-  if(Math.abs(soucet - 100) >= 0.5){ alert('Součet procent musí být 100 %.'); return; }
 
   const id = document.getElementById('recept-id').value;
   if(id){
     const recept = appState.recepty.find(r => r.id === id);
-    if(recept){ recept.nazev = nazev; recept.polozky = polozky; recept.psId = psId; }
+    if(recept){ recept.nazev = nazev; recept.polozky = polozky; }
   } else {
-    appState.recepty.push({ id: vytvorId(), psId, nazev, polozky });
+    appState.recepty.push({ id: vytvorId(), nazev, polozky });
   }
   ulozitData();
   zrusitEditaciReceptu();
@@ -1114,14 +1069,12 @@ function odeslatFormularReceptu(e){
 function upravitRecept(id){
   const recept = appState.recepty.find(r => r.id === id);
   if(!recept) return;
-  document.getElementById('recept-vyber-psa').value = recept.psId;
   document.getElementById('recept-id').value = recept.id;
   document.getElementById('recept-nazev').value = recept.nazev;
   document.getElementById('recept-radky').innerHTML = '';
-  recept.polozky.forEach(p => pridatRadekReceptu(p.surovinaId, p.procento));
+  recept.polozky.forEach(p => pridatRadekReceptu(p.surovinaId));
   document.getElementById('recept-tlacitko-odeslat').textContent = 'Uložit změny';
   document.getElementById('panel-recept-nadpis').textContent = 'Upravit recept';
-  vykresliSeznamReceptu();
   otevriPanel('recept');
 }
 
@@ -1130,7 +1083,6 @@ function zrusitEditaciReceptu(){
   document.getElementById('recept-id').value = '';
   document.getElementById('recept-radky').innerHTML = '';
   document.getElementById('recept-tlacitko-odeslat').textContent = 'Uložit recept';
-  soucetProcentFormulareReceptu();
 }
 
 function smazatRecept(id){
@@ -1141,33 +1093,22 @@ function smazatRecept(id){
 }
 
 function vykresliSeznamReceptu(){
-  const psId = document.getElementById('recept-vyber-psa').value;
   const kontejner = document.getElementById('seznam-receptu');
-  const pes = najdiPsa(psId);
-  if(!pes){
-    kontejner.innerHTML = '<p class="prazdny-stav">Nejdřív přidej psa v sekci Psi.</p>';
+  if(appState.recepty.length === 0){
+    kontejner.innerHTML = `<div class="prazdny-stav">${ikonaSnezenky(40)}<p>Zatím žádný recept.<br>Přidej první tlačítkem +.</p></div>`;
     return;
   }
-  const recepty = appState.recepty.filter(r => r.psId === psId);
-  if(recepty.length === 0){
-    kontejner.innerHTML = '<p class="prazdny-stav">Zatím žádný recept pro tohoto psa.</p>';
-    return;
-  }
-  kontejner.innerHTML = recepty.map(r => {
-    const vypocet = prepocitejGramazeReceptu(r, pes);
-    const soucetProcent = r.polozky.reduce((s, p) => s + p.procento, 0);
-    const tridaOdznaku = Math.abs(soucetProcent - 100) < 0.5 ? 'odznak-ok' : 'odznak-varovani';
-    const radkyHtml = vypocet.map(v => `<tr><td>${escapovatHtml(v.nazev)}</td><td>${zaokrouhli(v.procento,1)} %</td><td>${zaokrouhli(v.gramy,1)} g</td></tr>`).join('');
+  kontejner.innerHTML = appState.recepty.map(r => {
+    const seznamSurovin = r.polozky.map(p => {
+      const s = najdiSurovinu(p.surovinaId);
+      return escapovatHtml(s ? s.nazev : '(smazaná surovina)');
+    }).join(', ');
     return `
       <div class="karta karta-sloupec">
         <div class="karta-hlavicka">
           <strong>${escapovatHtml(r.nazev)}</strong>
-          <span class="odznak ${tridaOdznaku}">${zaokrouhli(soucetProcent,1)} %</span>
         </div>
-        <table>
-          <thead><tr><th>Surovina</th><th>%</th><th>g/den</th></tr></thead>
-          <tbody>${radkyHtml}</tbody>
-        </table>
+        <div class="text-slaby">${seznamSurovin}</div>
         <div class="karta-akce">
           <button type="button" class="tlacitko-ikona" onclick="upravitRecept('${r.id}')" aria-label="Upravit recept ${escapovatHtml(r.nazev)}">${ikonaUpravit()}</button>
           <button type="button" class="tlacitko-ikona nebezpecna" onclick="smazatRecept('${r.id}')" aria-label="Smazat recept ${escapovatHtml(r.nazev)}">${ikonaSmazat()}</button>
@@ -1254,6 +1195,7 @@ function vybratPsaDenik(noveId){
 function inicializovatDenik(){
   zajistiVybranehoPsaDeniku();
   vykresliPruhPsuDenik();
+  naplnSelectReceptuDenik();
   obnovitRozepsanyFormular(vybranyPesDenik);
   vykresliSeznamZaznamu();
   vykresliPrehled();
@@ -1283,6 +1225,24 @@ function pripojitSwipeDenik(){
       posunPsaDenik(dx < 0 ? 1 : -1);
     }
   }, { passive: true });
+}
+
+function naplnSelectReceptuDenik(){
+  const select = document.getElementById('denik-vyber-receptu');
+  if(appState.recepty.length === 0){
+    select.innerHTML = '<option value="">— zatím žádný recept —</option>';
+  } else {
+    select.innerHTML = '<option value="">Vybrat recept…</option>' +
+      appState.recepty.map(r => `<option value="${r.id}">${escapovatHtml(r.nazev)}</option>`).join('');
+  }
+}
+
+// Vloží suroviny z vybraného receptu jako nové (prázdné) řádky do rozepsaného záznamu — množství doplní uživatel ručně.
+function pouzitRecept(receptId){
+  if(!receptId) return;
+  const recept = appState.recepty.find(r => r.id === receptId);
+  if(!recept) return;
+  recept.polozky.forEach(p => pridatRadekDeniku(p.surovinaId, ''));
 }
 
 function pridatRadekDeniku(surovinaId = '', gramy = ''){
@@ -1708,7 +1668,7 @@ function importZalohy(vstup){
       verze: 1,
       psi: data.psi || [],
       suroviny: data.suroviny || [],
-      recepty: Array.isArray(data.recepty) ? data.recepty : [],
+      recepty: normalizovatRecepty(data.recepty),
       denik: Array.isArray(data.denik) ? data.denik : [],
       zelenina: normalizovatZeleninu(data.zelenina)
     };
@@ -1728,7 +1688,6 @@ function importZalohy(vstup){
 function vykresliVse(){
   vykresliSeznamPsu();
   vykresliSeznamSurovin();
-  naplnSelectPsuRecepty();
   vykresliSeznamReceptu();
   inicializovatDenik();
   vykresliZeleninu();
@@ -1746,7 +1705,6 @@ window.addEventListener('DOMContentLoaded', () => {
   pripojitSwipeDenik();
 
   vykresliVse();
-  soucetProcentFormulareReceptu();
 });
 </script>
 </body>
