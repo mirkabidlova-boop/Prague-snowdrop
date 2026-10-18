@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prague Snowdrop</title>
-<!-- build: 2026-08-17a -->
+<!-- build: 2026-10-18a -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#D9695B">
 <meta name="mobile-web-app-capable" content="yes">
@@ -222,6 +222,7 @@
   .radek-polozky{ display:flex; gap:8px; margin-bottom:8px; align-items:center; }
   .radek-polozky select{ flex:2; min-width:0; }
   .radek-polozky input{ flex:1; min-width:70px; }
+  .radek-polozky .jednotka-popisek{ flex:0 0 auto; color:var(--barva-textslaby); font-size:0.85rem; min-width:16px; }
   .tlacitko-odebrat{
     flex:0 0 34px; width:34px; height:34px; border:none; border-radius:6px;
     background:var(--barva-chyba); color:#fff; font-size:1rem; cursor:pointer;
@@ -302,6 +303,15 @@
       </button>
     </div>
     <div id="seznam-surovin"></div>
+
+    <div class="sekce-hlavicka" style="margin-top:28px;">
+      <h2>Doplňky a léky</h2>
+      <button type="button" class="tlacitko-fab" onclick="otevriPanelPridatDoplnek()" aria-label="Přidat doplněk nebo lék">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
+    </div>
+    <p class="napoveda">Jen pro evidenci — nepočítá se do kalorií ani do poměru Ca:P.</p>
+    <div id="seznam-doplnku"></div>
   </section>
 
   <!-- ==== SEKCE: RECEPTY ==== -->
@@ -339,6 +349,9 @@
 
         <div id="denik-radky"></div>
         <button type="button" class="tlacitko sekundarni" onclick="pridatRadekDeniku()">+ Přidat surovinu</button>
+
+        <div id="denik-doplnky-radky"></div>
+        <button type="button" class="tlacitko sekundarni" onclick="pridatRadekDoplnkuDeniku()">+ Přidat doplněk/lék</button>
 
         <button type="submit" class="tlacitko" id="zaznam-tlacitko-odeslat">Uložit záznam</button>
         <button type="button" class="tlacitko sekundarni" id="zaznam-tlacitko-zrusit" hidden onclick="zrusitEditaciZaznamu()">Zrušit úpravu</button>
@@ -523,6 +536,29 @@
   </div>
 </div>
 
+<!-- ==== PANEL: FORMULÁŘ DOPLŇKU / LÉKU ==== -->
+<div class="prekryv" id="prekryv-doplnek" hidden onclick="if(event.target===this) zavriPanel('doplnek')">
+  <div class="panel">
+    <div class="panel-hlavicka">
+      <h3 id="panel-doplnek-nadpis">Přidat doplněk nebo lék</h3>
+      <button type="button" class="tlacitko-zavrit" onclick="zavriPanel('doplnek')" aria-label="Zavřít">✕</button>
+    </div>
+    <form id="formular-doplnku">
+      <input type="hidden" id="doplnek-id">
+      <label for="doplnek-nazev">Název</label>
+      <input type="text" id="doplnek-nazev" placeholder="např. Lososový olej" required>
+
+      <label for="doplnek-jednotka">Typ</label>
+      <select id="doplnek-jednotka">
+        <option value="g">Doplněk — množství v gramech (g)</option>
+        <option value="ks">Lék — množství v kusech (ks)</option>
+      </select>
+
+      <button type="submit" class="tlacitko" id="doplnek-tlacitko-odeslat">Přidat</button>
+    </form>
+  </div>
+</div>
+
 <!-- ==== PANEL: FORMULÁŘ RECEPTU ==== -->
 <div class="prekryv" id="prekryv-recept" hidden onclick="if(event.target===this) zavriPanel('recept')">
   <div class="panel">
@@ -555,7 +591,7 @@ const CA_P_MIN = 1.2;
 const CA_P_MAX = 1.35;
 const NAZVY_MESICU = ['leden','únor','březen','duben','květen','červen','červenec','srpen','září','říjen','listopad','prosinec'];
 
-let appState = { verze: 1, psi: [], suroviny: [], recepty: [], denik: [] };
+let appState = { verze: 1, psi: [], suroviny: [], doplnky: [], recepty: [], denik: [] };
 let rezimObdobi = 'den';       // 'den' | 'tyden' | 'mesic'
 let kotevniDatum = '';         // datum, od kterého se počítá zobrazené období
 let docasnaFotoPsa;            // undefined = beze změny, null = odebrat, string (dataURL) = nová fotka
@@ -566,7 +602,7 @@ let rozpracovaneZaznamyDeniku = {}; // { [psId]: { editaceId, polozky } } — ne
 // 2. ULOŽIŠTĚ (localStorage)
 // ===================================================================
 function vychoziStav(){
-  return { verze: 1, psi: [], suroviny: [], recepty: [], denik: [], zelenina: { polozky: [], miskyPsu: {} } };
+  return { verze: 1, psi: [], suroviny: [], doplnky: [], recepty: [], denik: [], zelenina: { polozky: [], miskyPsu: {} } };
 }
 
 function normalizovatZeleninu(zelenina){
@@ -598,6 +634,7 @@ function nacistData(){
       verze: 1,
       psi: Array.isArray(data.psi) ? data.psi : [],
       suroviny: Array.isArray(data.suroviny) ? data.suroviny : [],
+      doplnky: Array.isArray(data.doplnky) ? data.doplnky : [],
       recepty: normalizovatRecepty(data.recepty),
       denik: Array.isArray(data.denik) ? data.denik : [],
       zelenina: normalizovatZeleninu(data.zelenina)
@@ -637,6 +674,7 @@ function escapovatHtml(text){
 
 function najdiPsa(id){ return appState.psi.find(p => p.id === id); }
 function najdiSurovinu(id){ return appState.suroviny.find(s => s.id === id); }
+function najdiDoplnek(id){ return appState.doplnky.find(d => d.id === id); }
 
 function dnesniDatumIso(){ return isoZDatumu(new Date()); }
 function isoZDatumu(d){
@@ -1012,6 +1050,85 @@ function smazatSurovinu(id){
 }
 
 // ===================================================================
+// 8b. DOPLŇKY A LÉKY (jen evidence, nepočítají se do výživy)
+// ===================================================================
+function otevriPanelPridatDoplnek(){
+  zrusitEditaciDoplnku();
+  document.getElementById('panel-doplnek-nadpis').textContent = 'Přidat doplněk nebo lék';
+  otevriPanel('doplnek');
+}
+
+function vykresliSeznamDoplnku(){
+  const kontejner = document.getElementById('seznam-doplnku');
+  if(appState.doplnky.length === 0){
+    kontejner.innerHTML = `<div class="prazdny-stav">${ikonaSnezenky(40)}<p>Zatím žádný doplněk ani lék.<br>Přidej první tlačítkem +.</p></div>`;
+    return;
+  }
+  kontejner.innerHTML = '<div class="seznam-radku">' + appState.doplnky.map(d => `
+    <div class="radek-seznamu">
+      <div class="avatar-radku avatar-zastupny avatar-surovina">${ikonaSurovina()}</div>
+      <div class="radek-obsah">
+        <strong>${escapovatHtml(d.nazev)}</strong>
+        <div class="text-slaby">${d.jednotka === 'ks' ? 'Lék · ks' : 'Doplněk · g'}</div>
+      </div>
+      <div class="radek-akce">
+        <button type="button" class="tlacitko-ikona" onclick="upravitDoplnek('${d.id}')" aria-label="Upravit ${escapovatHtml(d.nazev)}">${ikonaUpravit()}</button>
+        <button type="button" class="tlacitko-ikona nebezpecna" onclick="smazatDoplnek('${d.id}')" aria-label="Smazat ${escapovatHtml(d.nazev)}">${ikonaSmazat()}</button>
+      </div>
+    </div>`).join('') + '</div>';
+}
+
+function odeslatFormularDoplnku(e){
+  e.preventDefault();
+  const nazev = document.getElementById('doplnek-nazev').value.trim();
+  if(!nazev){ alert('Zadej název.'); return; }
+  const jednotka = document.getElementById('doplnek-jednotka').value;
+  const id = document.getElementById('doplnek-id').value;
+  if(id){
+    const doplnek = najdiDoplnek(id);
+    if(doplnek){ doplnek.nazev = nazev; doplnek.jednotka = jednotka; }
+  } else {
+    appState.doplnky.push({ id: vytvorId(), nazev, jednotka });
+  }
+  ulozitData();
+  zrusitEditaciDoplnku();
+  zavriPanel('doplnek');
+  vykresliSeznamDoplnku();
+}
+
+function upravitDoplnek(id){
+  const d = najdiDoplnek(id);
+  if(!d) return;
+  document.getElementById('doplnek-id').value = d.id;
+  document.getElementById('doplnek-nazev').value = d.nazev;
+  document.getElementById('doplnek-jednotka').value = d.jednotka;
+  document.getElementById('doplnek-tlacitko-odeslat').textContent = 'Uložit změny';
+  document.getElementById('panel-doplnek-nadpis').textContent = 'Upravit doplněk/lék';
+  otevriPanel('doplnek');
+}
+
+function zrusitEditaciDoplnku(){
+  document.getElementById('formular-doplnku').reset();
+  document.getElementById('doplnek-id').value = '';
+  document.getElementById('doplnek-tlacitko-odeslat').textContent = 'Přidat';
+}
+
+function smazatDoplnek(id){
+  const d = najdiDoplnek(id);
+  if(!d) return;
+  const zaznamyPouzite = appState.denik.filter(z => (z.doplnky || []).some(p => p.doplnekId === id));
+  let zprava = `Opravdu smazat "${d.nazev}"?`;
+  if(zaznamyPouzite.length > 0){
+    zprava += ` Je použitý v ${zaznamyPouzite.length} záznamech deníku — odebere se odtud.`;
+  }
+  if(!confirm(zprava)) return;
+  appState.doplnky = appState.doplnky.filter(x => x.id !== id);
+  appState.denik.forEach(z => { if(Array.isArray(z.doplnky)) z.doplnky = z.doplnky.filter(p => p.doplnekId !== id); });
+  ulozitData();
+  vykresliVse();
+}
+
+// ===================================================================
 // 9. SEKCE RECEPTY
 // ===================================================================
 function vytvorOptionsSurovin(vybranaId){
@@ -1153,9 +1270,17 @@ function zachytitRozepsanyFormular(psId){
       gramy: r.querySelector('.denik-gramy').value
     });
   });
+  const doplnky = [];
+  document.querySelectorAll('#denik-doplnky-radky .radek-polozky').forEach(r => {
+    doplnky.push({
+      doplnekId: r.querySelector('.denik-doplnek').value,
+      mnozstvi: r.querySelector('.denik-doplnek-mnozstvi').value
+    });
+  });
   rozpracovaneZaznamyDeniku[psId] = {
     editaceId: document.getElementById('zaznam-id').value,
-    polozky
+    polozky,
+    doplnky
   };
 }
 
@@ -1165,12 +1290,14 @@ function zachytitRozepsanyFormular(psId){
 function obnovitRozepsanyFormular(psId){
   const rozpracovany = psId ? rozpracovaneZaznamyDeniku[psId] : null;
   document.getElementById('denik-radky').innerHTML = '';
+  document.getElementById('denik-doplnky-radky').innerHTML = '';
   if(!document.getElementById('zaznam-datum').value){
     document.getElementById('zaznam-datum').value = dnesniDatumIso();
   }
   if(rozpracovany){
     document.getElementById('zaznam-id').value = rozpracovany.editaceId || '';
     rozpracovany.polozky.forEach(p => pridatRadekDeniku(p.surovinaId, p.gramy));
+    (rozpracovany.doplnky || []).forEach(p => pridatRadekDoplnkuDeniku(p.doplnekId, p.mnozstvi));
     document.getElementById('zaznam-tlacitko-odeslat').textContent = rozpracovany.editaceId ? 'Uložit změny' : 'Uložit záznam';
     document.getElementById('zaznam-tlacitko-zrusit').hidden = !rozpracovany.editaceId;
   } else {
@@ -1261,6 +1388,36 @@ function pridatRadekDeniku(surovinaId = '', gramy = ''){
   kontejner.appendChild(radek);
 }
 
+function vytvorOptionsDoplnku(vybranaId){
+  if(appState.doplnky.length === 0) return '<option value="">— nejdřív přidej doplněk/lék —</option>';
+  return appState.doplnky.map(d => `<option value="${d.id}" ${d.id === vybranaId ? 'selected' : ''}>${escapovatHtml(d.nazev)}</option>`).join('');
+}
+
+function pridatRadekDoplnkuDeniku(doplnekId = '', mnozstvi = ''){
+  if(appState.doplnky.length === 0){
+    alert('Nejdřív přidej doplněk nebo lék v sekci Suroviny.');
+    return;
+  }
+  const kontejner = document.getElementById('denik-doplnky-radky');
+  const radek = document.createElement('div');
+  radek.className = 'radek-polozky';
+  radek.innerHTML = `
+    <select class="denik-doplnek">${vytvorOptionsDoplnku(doplnekId)}</select>
+    <input type="number" class="denik-doplnek-mnozstvi" min="0" step="any" placeholder="množství" value="${mnozstvi}">
+    <span class="jednotka-popisek"></span>
+    <button type="button" class="tlacitko-odebrat" onclick="this.parentElement.remove();">✕</button>
+  `;
+  kontejner.appendChild(radek);
+  const select = radek.querySelector('.denik-doplnek');
+  const popisek = radek.querySelector('.jednotka-popisek');
+  const aktualizujJednotku = () => {
+    const d = najdiDoplnek(select.value);
+    popisek.textContent = d ? d.jednotka : '';
+  };
+  select.addEventListener('change', aktualizujJednotku);
+  aktualizujJednotku();
+}
+
 function odeslatFormularZaznamu(e){
   e.preventDefault();
   const psId = vybranyPesDenik;
@@ -1275,14 +1432,21 @@ function odeslatFormularZaznamu(e){
     const gramy = parseFloat(r.querySelector('.denik-gramy').value) || 0;
     if(surovinaId && gramy > 0) polozky.push({ surovinaId, gramy });
   });
-  if(polozky.length === 0){ alert('Přidej aspoň jednu surovinu se zadanými gramy.'); return; }
+  const radkyDoplnku = document.querySelectorAll('#denik-doplnky-radky .radek-polozky');
+  const doplnky = [];
+  radkyDoplnku.forEach(r => {
+    const doplnekId = r.querySelector('.denik-doplnek').value;
+    const mnozstvi = parseFloat(r.querySelector('.denik-doplnek-mnozstvi').value) || 0;
+    if(doplnekId && mnozstvi > 0) doplnky.push({ doplnekId, mnozstvi });
+  });
+  if(polozky.length === 0 && doplnky.length === 0){ alert('Přidej aspoň jednu surovinu se zadanými gramy, nebo doplněk/lék.'); return; }
 
   const id = document.getElementById('zaznam-id').value;
   if(id){
     const zaznam = appState.denik.find(z => z.id === id);
-    if(zaznam){ zaznam.datum = datum; zaznam.psId = psId; zaznam.castDne = castDne; zaznam.polozky = polozky; }
+    if(zaznam){ zaznam.datum = datum; zaznam.psId = psId; zaznam.castDne = castDne; zaznam.polozky = polozky; zaznam.doplnky = doplnky; }
   } else {
-    appState.denik.push({ id: vytvorId(), datum, psId, castDne, polozky });
+    appState.denik.push({ id: vytvorId(), datum, psId, castDne, polozky, doplnky });
   }
   ulozitData();
   zrusitEditaciZaznamu();
@@ -1299,6 +1463,8 @@ function upravitZaznamDeniku(id){
   document.getElementById('zaznam-cast-dne').value = zaznam.castDne || 'rano';
   document.getElementById('denik-radky').innerHTML = '';
   zaznam.polozky.forEach(p => pridatRadekDeniku(p.surovinaId, p.gramy));
+  document.getElementById('denik-doplnky-radky').innerHTML = '';
+  (zaznam.doplnky || []).forEach(p => pridatRadekDoplnkuDeniku(p.doplnekId, p.mnozstvi));
   document.getElementById('zaznam-tlacitko-odeslat').textContent = 'Uložit změny';
   document.getElementById('zaznam-tlacitko-zrusit').hidden = false;
   vykresliSeznamZaznamu();
@@ -1312,6 +1478,7 @@ function zrusitEditaciZaznamu(){
   document.getElementById('formular-zaznamu').reset();
   document.getElementById('zaznam-id').value = '';
   document.getElementById('denik-radky').innerHTML = '';
+  document.getElementById('denik-doplnky-radky').innerHTML = '';
   document.getElementById('zaznam-datum').value = zachovaneDatum;
   document.getElementById('zaznam-cast-dne').value = zachovanaCastDne;
   document.getElementById('zaznam-tlacitko-odeslat').textContent = 'Uložit záznam';
@@ -1345,12 +1512,17 @@ function vykresliSeznamZaznamu(){
       const s = najdiSurovinu(p.surovinaId);
       return `${s ? escapovatHtml(s.nazev) : '(smazaná surovina)'} ${zaokrouhli(p.gramy,2)} g`;
     }).join(', ');
+    const popisDoplnku = (z.doplnky || []).map(p => {
+      const d = najdiDoplnek(p.doplnekId);
+      return `${d ? escapovatHtml(d.nazev) : '(smazaný doplněk)'} ${zaokrouhli(p.mnozstvi,2)} ${d ? d.jednotka : ''}`;
+    }).join(', ');
     const castDne = popisyCastiDne[z.castDne] || 'Ráno';
     return `
       <div class="karta">
         <div>
           <strong>${formatDatumCz(z.datum)} — ${castDne}</strong>
           <div class="text-slaby">${popisPolozek}</div>
+          ${popisDoplnku ? `<div class="text-slaby">💊 ${popisDoplnku}</div>` : ''}
         </div>
         <div class="karta-akce">
           <button type="button" class="tlacitko-ikona" onclick="upravitZaznamDeniku('${z.id}')" aria-label="Upravit záznam">${ikonaUpravit()}</button>
@@ -1668,6 +1840,7 @@ function importZalohy(vstup){
       verze: 1,
       psi: data.psi || [],
       suroviny: data.suroviny || [],
+      doplnky: Array.isArray(data.doplnky) ? data.doplnky : [],
       recepty: normalizovatRecepty(data.recepty),
       denik: Array.isArray(data.denik) ? data.denik : [],
       zelenina: normalizovatZeleninu(data.zelenina)
@@ -1688,6 +1861,7 @@ function importZalohy(vstup){
 function vykresliVse(){
   vykresliSeznamPsu();
   vykresliSeznamSurovin();
+  vykresliSeznamDoplnku();
   vykresliSeznamReceptu();
   inicializovatDenik();
   vykresliZeleninu();
@@ -1700,6 +1874,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('formular-psa').addEventListener('submit', odeslatFormularPsa);
   document.getElementById('formular-suroviny').addEventListener('submit', odeslatFormularSuroviny);
+  document.getElementById('formular-doplnku').addEventListener('submit', odeslatFormularDoplnku);
   document.getElementById('formular-receptu').addEventListener('submit', odeslatFormularReceptu);
   document.getElementById('formular-zaznamu').addEventListener('submit', odeslatFormularZaznamu);
   pripojitSwipeDenik();
