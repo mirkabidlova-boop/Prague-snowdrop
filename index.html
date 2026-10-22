@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prague Snowdrop</title>
-<!-- build: 2026-10-18b -->
+<!-- build: 2026-10-22a -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#D9695B">
 <meta name="mobile-web-app-capable" content="yes">
@@ -574,6 +574,10 @@
       <div id="recept-radky"></div>
       <button type="button" class="tlacitko sekundarni" onclick="pridatRadekReceptu()">+ Přidat surovinu</button>
 
+      <h3>Doplňky a léky</h3>
+      <div id="recept-doplnky-radky"></div>
+      <button type="button" class="tlacitko sekundarni" onclick="pridatRadekDoplnkuReceptu()">+ Přidat doplněk/lék</button>
+
       <button type="submit" class="tlacitko" id="recept-tlacitko-odeslat">Uložit recept</button>
     </form>
   </div>
@@ -620,7 +624,8 @@ function normalizovatRecepty(recepty){
   return recepty.map(r => ({
     id: r.id,
     nazev: r.nazev,
-    polozky: Array.isArray(r.polozky) ? r.polozky.map(p => ({ surovinaId: p.surovinaId })) : []
+    polozky: Array.isArray(r.polozky) ? r.polozky.map(p => ({ surovinaId: p.surovinaId })) : [],
+    doplnky: Array.isArray(r.doplnky) ? r.doplnky.map(p => ({ doplnekId: p.doplnekId })) : []
   }));
 }
 
@@ -1117,13 +1122,15 @@ function smazatDoplnek(id){
   const d = najdiDoplnek(id);
   if(!d) return;
   const zaznamyPouzite = appState.denik.filter(z => (z.doplnky || []).some(p => p.doplnekId === id));
+  const receptyPouzite = appState.recepty.filter(r => (r.doplnky || []).some(p => p.doplnekId === id));
   let zprava = `Opravdu smazat "${d.nazev}"?`;
-  if(zaznamyPouzite.length > 0){
-    zprava += ` Je použitý v ${zaznamyPouzite.length} záznamech deníku — odebere se odtud.`;
+  if(zaznamyPouzite.length > 0 || receptyPouzite.length > 0){
+    zprava += ` Je použitý v ${zaznamyPouzite.length} záznamech deníku a ${receptyPouzite.length} receptech — odebere se odtud.`;
   }
   if(!confirm(zprava)) return;
   appState.doplnky = appState.doplnky.filter(x => x.id !== id);
   appState.denik.forEach(z => { if(Array.isArray(z.doplnky)) z.doplnky = z.doplnky.filter(p => p.doplnekId !== id); });
+  appState.recepty.forEach(r => { if(Array.isArray(r.doplnky)) r.doplnky = r.doplnky.filter(p => p.doplnekId !== id); });
   ulozitData();
   vykresliVse();
 }
@@ -1158,6 +1165,21 @@ function pridatRadekReceptu(surovinaId = ''){
   kontejner.appendChild(radek);
 }
 
+function pridatRadekDoplnkuReceptu(doplnekId = ''){
+  if(appState.doplnky.length === 0){
+    alert('Nejdřív přidej doplněk nebo lék v sekci Suroviny.');
+    return;
+  }
+  const kontejner = document.getElementById('recept-doplnky-radky');
+  const radek = document.createElement('div');
+  radek.className = 'radek-polozky';
+  radek.innerHTML = `
+    <select class="recept-doplnek">${vytvorOptionsDoplnku(doplnekId)}</select>
+    <button type="button" class="tlacitko-odebrat" onclick="this.parentElement.remove();">✕</button>
+  `;
+  kontejner.appendChild(radek);
+}
+
 function odeslatFormularReceptu(e){
   e.preventDefault();
   const nazev = document.getElementById('recept-nazev').value.trim();
@@ -1168,14 +1190,20 @@ function odeslatFormularReceptu(e){
     const surovinaId = r.querySelector('.recept-surovina').value;
     if(surovinaId) polozky.push({ surovinaId });
   });
-  if(polozky.length === 0){ alert('Přidej aspoň jednu surovinu do receptu.'); return; }
+  const radkyDoplnku = document.querySelectorAll('#recept-doplnky-radky .radek-polozky');
+  const doplnky = [];
+  radkyDoplnku.forEach(r => {
+    const doplnekId = r.querySelector('.recept-doplnek').value;
+    if(doplnekId) doplnky.push({ doplnekId });
+  });
+  if(polozky.length === 0 && doplnky.length === 0){ alert('Přidej aspoň jednu surovinu nebo doplněk/lék do receptu.'); return; }
 
   const id = document.getElementById('recept-id').value;
   if(id){
     const recept = appState.recepty.find(r => r.id === id);
-    if(recept){ recept.nazev = nazev; recept.polozky = polozky; }
+    if(recept){ recept.nazev = nazev; recept.polozky = polozky; recept.doplnky = doplnky; }
   } else {
-    appState.recepty.push({ id: vytvorId(), nazev, polozky });
+    appState.recepty.push({ id: vytvorId(), nazev, polozky, doplnky });
   }
   ulozitData();
   zrusitEditaciReceptu();
@@ -1190,6 +1218,8 @@ function upravitRecept(id){
   document.getElementById('recept-nazev').value = recept.nazev;
   document.getElementById('recept-radky').innerHTML = '';
   recept.polozky.forEach(p => pridatRadekReceptu(p.surovinaId));
+  document.getElementById('recept-doplnky-radky').innerHTML = '';
+  (recept.doplnky || []).forEach(p => pridatRadekDoplnkuReceptu(p.doplnekId));
   document.getElementById('recept-tlacitko-odeslat').textContent = 'Uložit změny';
   document.getElementById('panel-recept-nadpis').textContent = 'Upravit recept';
   otevriPanel('recept');
@@ -1199,6 +1229,7 @@ function zrusitEditaciReceptu(){
   document.getElementById('formular-receptu').reset();
   document.getElementById('recept-id').value = '';
   document.getElementById('recept-radky').innerHTML = '';
+  document.getElementById('recept-doplnky-radky').innerHTML = '';
   document.getElementById('recept-tlacitko-odeslat').textContent = 'Uložit recept';
 }
 
@@ -1220,12 +1251,17 @@ function vykresliSeznamReceptu(){
       const s = najdiSurovinu(p.surovinaId);
       return escapovatHtml(s ? s.nazev : '(smazaná surovina)');
     }).join(', ');
+    const seznamDoplnku = (r.doplnky || []).map(p => {
+      const d = najdiDoplnek(p.doplnekId);
+      return escapovatHtml(d ? d.nazev : '(smazaný doplněk)');
+    }).join(', ');
     return `
       <div class="karta karta-sloupec">
         <div class="karta-hlavicka">
           <strong>${escapovatHtml(r.nazev)}</strong>
         </div>
         <div class="text-slaby">${seznamSurovin}</div>
+        ${seznamDoplnku ? `<div class="text-slaby">💊 ${seznamDoplnku}</div>` : ''}
         <div class="karta-akce">
           <button type="button" class="tlacitko-ikona" onclick="upravitRecept('${r.id}')" aria-label="Upravit recept ${escapovatHtml(r.nazev)}">${ikonaUpravit()}</button>
           <button type="button" class="tlacitko-ikona nebezpecna" onclick="smazatRecept('${r.id}')" aria-label="Smazat recept ${escapovatHtml(r.nazev)}">${ikonaSmazat()}</button>
@@ -1370,6 +1406,7 @@ function pouzitRecept(receptId){
   const recept = appState.recepty.find(r => r.id === receptId);
   if(!recept) return;
   recept.polozky.forEach(p => pridatRadekDeniku(p.surovinaId, ''));
+  (recept.doplnky || []).forEach(p => pridatRadekDoplnkuDeniku(p.doplnekId, ''));
 }
 
 function pridatRadekDeniku(surovinaId = '', gramy = ''){
